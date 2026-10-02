@@ -278,6 +278,7 @@ function pageHtml({ slug, title, html, headings, description }) {
   <meta property="og:description" content="${escapeHtml(truncate(description, 180))}">
   <meta property="og:type" content="article">
   <link rel="stylesheet" href="../assets/site.css">
+  <script defer src="https://umami.ordu.dev/script.js" data-website-id="250bd07e-3f44-447c-9e94-b4b012366c75"></script>
 </head>
 <body class="layout-doc">
   <header class="site-header">
@@ -352,6 +353,7 @@ function indexHtml() {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Karla:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="assets/site.css">
+  <script defer src="https://umami.ordu.dev/script.js" data-website-id="250bd07e-3f44-447c-9e94-b4b012366c75"></script>
 </head>
 <body class="layout-home">
   <header class="site-header">
