@@ -15,7 +15,7 @@ const pd = new PatientDesk({ apiKey: "pd_live_..." });
 
 ## `No global fetch found`
 
-The runtime has no `fetch`. Pass one, or upgrade to Node 18+.
+The runtime has no `fetch`. Pass one, or upgrade to Node 20+.
 
 ```ts
 const pd = new PatientDesk({ apiKey, fetch: myFetch });
@@ -23,7 +23,7 @@ const pd = new PatientDesk({ apiKey, fetch: myFetch });
 
 ## `No WebSocket available`
 
-Streaming needs a `WebSocket`. Node 18 through 21 do not ship one. Inject `ws`.
+Streaming needs a `WebSocket`. Node 20 and 21 do not ship one. Inject `ws`.
 
 ```ts
 import WebSocket from "ws";

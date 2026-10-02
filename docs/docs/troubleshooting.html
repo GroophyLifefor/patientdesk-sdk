@@ -78,11 +78,11 @@ pass the key.</p>
 <pre><code class="language-ts">const pd = new PatientDesk({ apiKey: &quot;pd_live_...&quot; });
 </code></pre>
 <h2 id="no-global-fetch-found"><code>No global fetch found</code></h2>
-<p>The runtime has no <code>fetch</code>. Pass one, or upgrade to Node 18+.</p>
+<p>The runtime has no <code>fetch</code>. Pass one, or upgrade to Node 20+.</p>
 <pre><code class="language-ts">const pd = new PatientDesk({ apiKey, fetch: myFetch });
 </code></pre>
 <h2 id="no-websocket-available"><code>No WebSocket available</code></h2>
-<p>Streaming needs a <code>WebSocket</code>. Node 18 through 21 do not ship one. Inject <code>ws</code>.</p>
+<p>Streaming needs a <code>WebSocket</code>. Node 20 and 21 do not ship one. Inject <code>ws</code>.</p>
 <pre><code class="language-ts">import WebSocket from &quot;ws&quot;;
 const pd = new PatientDesk({ apiKey, WebSocket });
 </code></pre>

@@ -77,7 +77,7 @@ before the socket closes.
 
 ## Requirements
 
-Streaming needs a `WebSocket` implementation. In Node 18 through 21 there is no
+Streaming needs a `WebSocket` implementation. In Node 20 and 21 there is no
 global `WebSocket`, so inject one. From Node 22 the global exists.
 
 ```ts

@@ -9,7 +9,7 @@
 > Not affiliated with, endorsed by, or supported by PatientDesk. It is an
 > independent client for their public, OpenAI-compatible API.
 
-Zero runtime dependencies. Works on Node 18+, Deno, Bun and edge runtimes
+Zero runtime dependencies. Works on Node 20+, Deno, Bun and edge runtimes
 (uses the global `fetch` / `WebSocket`; both can be injected).
 
 ## Install
@@ -180,7 +180,7 @@ required under **Settings → Secrets and variables → Actions**.
 
 PatientDesk'in **resmî olmayan** Türkçe ses SDK'sı: **Alania** (metinden sese) ve
 **Duyu** (sesten metne, REST + dokümante edilmemiş WebSocket akışı). Sıfır çalışma
-zamanı bağımlılığı; Node 18+, Deno, Bun.
+zamanı bağımlılığı; Node 20+, Deno, Bun.
 
 ```ts
 const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });

@@ -27,7 +27,7 @@ flowchart LR
   client --> status["fetchStatus()<br/>no API key"]
 ```
 
-**Need:** [Node.js 18+](https://nodejs.org/), an API key from
+**Need:** [Node.js 20+](https://nodejs.org/), an API key from
 [speech.patientdesk.ai](https://speech.patientdesk.ai). Deno, Bun and edge
 runtimes work too, since only standard globals are used.
 
@@ -397,7 +397,7 @@ before the socket closes.
 
 ## Requirements
 
-Streaming needs a `WebSocket` implementation. In Node 18 through 21 there is no
+Streaming needs a `WebSocket` implementation. In Node 20 and 21 there is no
 global `WebSocket`, so inject one. From Node 22 the global exists.
 
 ```ts
@@ -749,7 +749,7 @@ const pd = new PatientDesk({
 
 ## Custom `WebSocket`
 
-Node 18 through 21 have no global `WebSocket`. Inject one for streaming.
+Node 20 and 21 have no global `WebSocket`. Inject one for streaming.
 
 ```ts
 import WebSocket from "ws";
@@ -1039,7 +1039,7 @@ const pd = new PatientDesk({ apiKey: "pd_live_..." });
 
 ## `No global fetch found`
 
-The runtime has no `fetch`. Pass one, or upgrade to Node 18+.
+The runtime has no `fetch`. Pass one, or upgrade to Node 20+.
 
 ```ts
 const pd = new PatientDesk({ apiKey, fetch: myFetch });
@@ -1047,7 +1047,7 @@ const pd = new PatientDesk({ apiKey, fetch: myFetch });
 
 ## `No WebSocket available`
 
-Streaming needs a `WebSocket`. Node 18 through 21 do not ship one. Inject `ws`.
+Streaming needs a `WebSocket`. Node 20 and 21 do not ship one. Inject `ws`.
 
 ```ts
 import WebSocket from "ws";

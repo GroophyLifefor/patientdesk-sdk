@@ -66,7 +66,7 @@ const pd = new PatientDesk({
 
 ## Custom `WebSocket`
 
-Node 18 through 21 have no global `WebSocket`. Inject one for streaming.
+Node 20 and 21 have no global `WebSocket`. Inject one for streaming.
 
 ```ts
 import WebSocket from "ws";

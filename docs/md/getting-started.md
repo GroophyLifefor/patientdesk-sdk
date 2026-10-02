@@ -19,7 +19,7 @@ flowchart LR
   client --> status["fetchStatus()<br/>no API key"]
 ```
 
-**Need:** [Node.js 18+](https://nodejs.org/), an API key from
+**Need:** [Node.js 20+](https://nodejs.org/), an API key from
 [speech.patientdesk.ai](https://speech.patientdesk.ai). Deno, Bun and edge
 runtimes work too, since only standard globals are used.
 

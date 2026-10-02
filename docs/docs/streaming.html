@@ -167,7 +167,7 @@ await stream.closed;
 <p><code>stop()</code> tells the server the utterance ended so it can flush a final transcript
 before the socket closes.</p>
 <h2 id="requirements">Requirements</h2>
-<p>Streaming needs a <code>WebSocket</code> implementation. In Node 18 through 21 there is no
+<p>Streaming needs a <code>WebSocket</code> implementation. In Node 20 and 21 there is no
 global <code>WebSocket</code>, so inject one. From Node 22 the global exists.</p>
 <pre><code class="language-ts">import WebSocket from &quot;ws&quot;;
 import { PatientDesk } from &quot;patientdesk-sdk&quot;;

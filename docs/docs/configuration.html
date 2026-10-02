@@ -217,7 +217,7 @@ accepted.</p>
 });
 </code></pre>
 <h2 id="custom-websocket">Custom <code>WebSocket</code></h2>
-<p>Node 18 through 21 have no global <code>WebSocket</code>. Inject one for streaming.</p>
+<p>Node 20 and 21 have no global <code>WebSocket</code>. Inject one for streaming.</p>
 <pre><code class="language-ts">import WebSocket from &quot;ws&quot;;
 
 const pd = new PatientDesk({ apiKey, WebSocket });

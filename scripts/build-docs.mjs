@@ -373,7 +373,7 @@ function indexHtml() {
       <h1 class="pd-title">Turkish speech.<br><em>One small SDK.</em></h1>
       <p class="pd-lead">
         Alania text to speech and Duyu speech to text, wrapped for TypeScript.
-        Zero runtime dependencies, works on Node 18+, Deno, Bun and edge runtimes.
+        Zero runtime dependencies, works on Node 20+, Deno, Bun and edge runtimes.
       </p>
       <div class="pd-actions">
         <a class="pd-btn pd-btn-primary" href="docs/getting-started.html">Get started</a>

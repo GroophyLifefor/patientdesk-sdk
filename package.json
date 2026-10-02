@@ -34,13 +34,13 @@
   ],
   "sideEffects": false,
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test --test-timeout=20000 test/unit",
-    "full-test": "npm run build && node --test --test-timeout=20000 test/unit && node scripts/preflight.mjs && node --test --test-timeout=120000 test/live",
+    "test": "npm run build && cd test/unit && node --test --test-timeout=20000",
+    "full-test": "npm run build && cd test/unit && node --test --test-timeout=20000 && cd ../.. && node scripts/preflight.mjs && cd test/live && node --test --test-timeout=120000",
     "preflight": "node scripts/preflight.mjs",
     "fixtures": "node scripts/fixtures.mjs",
     "example:tts": "node examples/tts.mjs",

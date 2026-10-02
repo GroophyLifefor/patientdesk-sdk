@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [18, 20, 22, 24]
+        node: [20, 22, 24]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -24,6 +24,7 @@ jobs:
       - name: Build
         run: npm run build
       - name: Unit tests (no key, no network)
-        run: node --test --test-timeout=20000 test/unit
+        working-directory: test/unit
+        run: node --test --test-timeout=20000
       - name: Package contents
         run: npm pack --dry-run
