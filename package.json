@@ -1,0 +1,45 @@
+{
+  "name": "patientdesk-sdk",
+  "version": "0.0.2",
+  "description": "Unofficial SDK for PatientDesk Turkish voice models — Alania (text-to-speech) and Duyu (speech-to-text). Placeholder release; the API lands in 0.1.0.",
+  "keywords": [
+    "patientdesk",
+    "alania",
+    "duyu",
+    "tts",
+    "stt",
+    "text-to-speech",
+    "speech-to-text",
+    "turkish",
+    "voice",
+    "sdk"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --check index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GroophyLifefor/patientdesk-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GroophyLifefor/patientdesk-sdk/issues"
+  },
+  "homepage": "https://github.com/GroophyLifefor/patientdesk-sdk#readme"
+}
