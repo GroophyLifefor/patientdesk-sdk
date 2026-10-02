@@ -1,0 +1,1139 @@
+# patientdesk-sdk
+
+> Unofficial TypeScript SDK for PatientDesk Turkish voice models. Alania text-to-speech, Duyu speech-to-text over REST and WebSocket, and a keyless status helper. Zero runtime dependencies.
+
+---
+
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/getting-started.md
+
+# Getting started
+
+`patientdesk-sdk` is an **unofficial** client for PatientDesk's Turkish voice
+models. It wraps **Alania** text-to-speech and **Duyu** speech-to-text, plus a
+keyless Statuspage health check. It has zero runtime dependencies and uses the
+global `fetch` and `WebSocket`, both of which can be injected.
+
+> Not affiliated with, endorsed by, or supported by PatientDesk. It is an
+> independent client for their public, OpenAI-compatible API.
+
+## Overview
+
+```mermaid
+flowchart LR
+  install[Install package] --> client[new PatientDesk]
+  client --> tts["speech.create()<br/>Alania TTS"]
+  client --> stt["audio.transcribe()<br/>Duyu STT"]
+  client --> stream["audio.transcribeStream()<br/>experimental"]
+  client --> status["fetchStatus()<br/>no API key"]
+```
+
+**Need:** [Node.js 18+](https://nodejs.org/), an API key from
+[speech.patientdesk.ai](https://speech.patientdesk.ai). Deno, Bun and edge
+runtimes work too, since only standard globals are used.
+
+## 1. Install
+
+```sh
+npm install patientdesk-sdk
+```
+
+## 2. Set the API key
+
+The client reads `PATIENDESK_API_KEY`, falling back to `PATIENDESK_KEY`. You can
+also pass it directly to the constructor.
+
+```sh
+# macOS / Linux
+export PATIENDESK_API_KEY="pd_live_..."
+
+# Windows PowerShell
+$env:PATIENDESK_API_KEY="pd_live_..."
+```
+
+## 3. First request
+
+```ts
+import { PatientDesk } from "patientdesk-sdk";
+
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+// Text to speech (Alania)
+const speech = await pd.speech.create({
+  input: "Randevunuz oluşturuldu.",
+  response_format: "wav",
+});
+const wav = new Uint8Array(await speech.arrayBuffer());
+
+// Speech to text (Duyu)
+const { text } = await pd.audio.transcribe({
+  audio: wav,
+  audio_format: "wav",
+  language: "tr",
+});
+console.log(text);
+```
+
+## 4. Health check (no key)
+
+```ts
+import { fetchStatus, isOperational, statusDescription } from "patientdesk-sdk";
+
+const status = await fetchStatus();
+console.log(statusDescription(status)); // "All Systems Operational"
+console.log(isOperational(status) ? "up" : "degraded");
+```
+
+## What is on the client
+
+| Member | Type | What it does |
+| --- | --- | --- |
+| `pd.speech` | `SpeechApi` | Alania text-to-speech. |
+| `pd.audio` | `AudioApi` | Duyu speech-to-text, REST and streaming. |
+| `pd.baseUrl` | `string` | Resolved API base URL. |
+| `pd.apiKey` | `string` | Resolved API key. |
+| `pd.fetchImpl` | `typeof fetch` | The `fetch` in use. |
+| `pd.wsImpl` | `WebSocketConstructor` | The `WebSocket` in use, if any. |
+
+## Where to go next
+
+- [Node.js recipes](recipes.md): speak, transcribe a file, use the microphone.
+- [Text to speech](text-to-speech.md): every Alania parameter and output shape.
+- [Speech to text](speech-to-text.md): formats, timestamps, subtitles.
+- [Streaming](streaming.md): the experimental WebSocket session.
+- [Errors](errors.md): retries, backoff and rate limits.
+- [Testing](testing.md): how to run the offline and live suites.
+
+## Not sure it is us
+
+Add `PATIENDESK_BASE_URL` to point the client at a proxy or a mock, and inject a
+custom `fetch`. See [Configuration](configuration.md).
+
+---
+
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/text-to-speech.md
+
+# Text to speech
+
+Alania is PatientDesk's text-to-speech model. One endpoint, `POST /audio/speech`,
+takes JSON and returns the audio itself as the response body.
+
+## Basic call
+
+```ts
+const speech = await pd.speech.create({
+  input: "Yarın saat 14:05 için randevunuz var.",
+  response_format: "mp3",
+});
+
+speech.contentType; // "audio/mpeg"
+speech.disclosure;  // "ai-generated" (from the X-Disclosure header)
+```
+
+`create()` returns a `SpeechResponse`, a thin view over the one response body.
+
+| Member | Type | Notes |
+| --- | --- | --- |
+| `response` | `Response` | The raw response. Its body can be read once. |
+| `contentType` | `string` | From the `Content-Type` header, or the format table. |
+| `disclosure` | `string \| null` | `X-Disclosure`, normally `ai-generated`. |
+| `arrayBuffer()` | `Promise<ArrayBuffer>` | Whole audio. |
+| `blob()` | `Promise<Blob>` | Whole audio with the right `type`. |
+| `stream()` | `ReadableStream<Uint8Array> \| null` | The raw body stream. |
+
+Read the body **once**. Pick one of `arrayBuffer`, `blob` or `stream`.
+
+## Parameters
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `input` | `string` | required | Up to 5,000 characters. Longer text throws `RangeError`. |
+| `model` | `string` | `"alania-v1"` | Aggregators may use a namespaced id. |
+| `voice` | `string` | `"alania"` | The single built-in voice. |
+| `response_format` | `TtsFormat` | `"wav"` | `wav`, `mp3`, `opus`, `flac`, `aac`, `pcm`. |
+| `temperature` | `number` | server side `0.30` | `0..1`, higher is less consistent. |
+| `seed` | `number` | unset | Same text and seed are not byte-identical. |
+| `extra` | `Record<string, unknown>` | unset | Merged into the body for forward compatibility. |
+
+`wav` output is 24 kHz, mono, 16-bit.
+
+## Output formats
+
+| `response_format` | `contentType` |
+| --- | --- |
+| `wav` | `audio/wav` |
+| `mp3` | `audio/mpeg` |
+| `opus` | `audio/ogg` |
+| `flac` | `audio/flac` |
+| `aac` | `audio/aac` |
+| `pcm` | `audio/L16` |
+
+When the server sends a `Content-Type`, it wins over the table.
+
+## Low-latency streaming
+
+`createRaw()` skips the wrapper and returns the raw `Response`, so you can pipe
+`response.body` to a player without buffering the whole file.
+
+```ts
+const response = await pd.speech.createRaw({
+  input: "Randevunuz oluşturuldu.",
+  response_format: "pcm",
+});
+
+const reader = response.body!.getReader();
+for (;;) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  player.write(value);
+}
+```
+
+Note: the native API ignores the deprecated `stream` field and returns the audio
+in one piece. Stream the returned body yourself, as above.
+
+## Splitting long text
+
+Alania accepts at most 5,000 characters. Split on sentence boundaries and join
+the resulting files with `ffmpeg` if you need a single recording.
+
+```ts
+const chunks = splitBySentence(longText, 5000);
+for (const [i, chunk] of chunks.entries()) {
+  const speech = await pd.speech.create({ input: chunk, response_format: "mp3" });
+  await Deno.writeFile(`part-${i}.mp3`, new Uint8Array(await speech.arrayBuffer()));
+}
+```
+
+## Errors
+
+Invalid local input throws before any request: `TypeError` for an empty `input`,
+`RangeError` for text over 5,000 characters. Request failures throw
+`PatientDeskError`. See [Errors](errors.md).
+
+---
+
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/speech-to-text.md
+
+# Speech to text
+
+Duyu is PatientDesk's speech-to-text model. The public endpoint is
+`POST /audio/transcriptions` and it takes **base64 audio in a JSON body**. There
+is no multipart upload and no `file_id`.
+
+## Basic call
+
+```ts
+import { readFileSync } from "node:fs";
+
+const { text } = await pd.audio.transcribe({
+  audio: readFileSync("kayit.m4a"),
+  audio_format: "m4a",   // optional, detected from the first bytes otherwise
+  language: "tr",        // "tr" (default) or "auto"
+  prompt: "ilaç: parol", // optional spelling hint
+});
+console.log(text);
+```
+
+You can pass raw bytes, an `ArrayBuffer` or a `Blob`. Prefer `audio_format` when
+you know it, and let the server detect it when you do not.
+
+## Parameters
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `audio` | `Uint8Array \| ArrayBuffer \| Blob` | none | Provide `audio` or `audioBase64`. |
+| `audioBase64` | `string` | none | Pre-encoded audio, no data URL prefix. |
+| `model` | `string` | `"duyu-1"` | |
+| `audio_format` | `SttFormat` | detected | `wav`, `mp3`, `m4a`, `webm`, `ogg`, `flac`. |
+| `language` | `string` | `"tr"` | `tr`, `auto`, or a full code. |
+| `prompt` | `string` | unset | Names, drug names, ID formats. |
+| `temperature` | `number` | `0` | Between 0 and 1. |
+| `response_format` | `SttResponseFormat` | `"json"` | `json`, `text`, `verbose_json`, `srt`, `vtt`. |
+| `timestamp_granularities` | `("segment" \| "word")[]` | unset | Only with `verbose_json`. |
+| `extra` | `Record<string, unknown>` | unset | Merged into the body. |
+
+The maximum audio size is about 9 MB per request.
+
+## Response shapes
+
+`response_format` decides the return type, and the overloads reflect it.
+
+| `response_format` | Returns |
+| --- | --- |
+| omitted or `json` | `Transcription` |
+| `verbose_json` | `Transcription` with `segments` and `words` |
+| `text`, `srt`, `vtt` | `string` |
+
+```ts
+// verbose_json -> segments and word timings
+const detailed = await pd.audio.transcribe({
+  audio: bytes,
+  response_format: "verbose_json",
+  timestamp_granularities: ["word"],
+});
+for (const w of detailed.words ?? []) {
+  console.log(`${w.start.toFixed(2)}s ${w.word}`);
+}
+
+// srt -> the subtitle text itself
+const srt = await pd.audio.transcribe({ audio: bytes, response_format: "srt" });
+```
+
+The `Transcription` shape:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `text` | `string` | The transcript. |
+| `task` | `string` | e.g. `transcribe`. |
+| `language` | `string` | Detected or requested language. |
+| `duration` | `number` | Seconds, when reported. |
+| `segments` | `TranscriptionSegment[]` | With `verbose_json`. |
+| `words` | `TranscriptionWord[]` | With `verbose_json` and word granularity. |
+
+## Base64 helper
+
+`toBase64()` is exported if you need to build the payload yourself. A `data:`
+URL prefix is stripped automatically when you pass `audioBase64`.
+
+```ts
+import { toBase64 } from "patientdesk-sdk";
+
+const b64 = toBase64(new Uint8Array(buf)); // no data: prefix
+await pd.audio.transcribe({ audioBase64: b64, audio_format: "wav" });
+```
+
+## Live transcription
+
+For microphone use, the WebSocket session is lower latency than the REST call.
+It is undocumented and experimental, so it lives on its own page:
+[Streaming](streaming.md).
+
+## Service-side decodes
+
+PatientDesk's REST endpoint has been observed returning `400 undecodable_audio`,
+or a bundled internal stack trace, for perfectly valid files. Those are upstream
+faults. The live suite labels them for you, see [Testing](testing.md).
+
+---
+
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/streaming.md
+
+# Streaming
+
+`transcribeStream()` speaks the WebSocket protocol that PatientDesk's own voice
+endpoint uses at `wss://voice.patientdesk.ai/v1/audio/stream`. It is **not** in
+PatientDesk's public documentation, so treat it as experimental. The protocol
+mirrors what the Ömer desktop assistant uses in production.
+
+This page describes behavior that can change without notice. For a supported
+path, use the REST endpoint in [Speech to text](speech-to-text.md).
+
+## A known endpoint change
+
+The endpoint once took the key as a `key` query parameter. It now expects a
+`token` query parameter. A `key` connection opens but never sends a `ready`
+frame, and any other parameter name gets `missing_api_key`. The SDK sends
+`token`. If a socket connects and then just sits there, check this first.
+
+Authentication is passed in the URL for a browser `WebSocket`, which cannot set
+headers. Treat the URL as a secret and do not log it.
+
+The handshake is also intermittently refused. A fresh socket sometimes closes
+with code `1006` before the `ready` frame, roughly one attempt in five in our
+observations. Retry the connection a few times before assuming a client bug. The
+[live suite](testing.md) does exactly that.
+
+## Opening a session
+
+```ts
+const stream = pd.audio.transcribeStream(
+  {
+    ready: (info) => console.log("ready", info.model),
+    final: (text) => console.log("final:", text),
+    error: (message) => console.error(message),
+    close: (code, reason) => console.log("closed", code, reason),
+  },
+  { sampleRate: 16000, eagerFinal: true },
+);
+
+stream.sendAudio(pcmChunk); // raw 16-bit PCM, mono
+stream.stop();              // sends {type:"stop"} then closes
+await stream.closed;
+```
+
+## Handshake
+
+The client opens the socket and sends a JSON `start` frame on `open`:
+
+```json
+{ "type": "start", "sampleRate": 16000, "eager_final": true }
+```
+
+After that it sends raw audio as **binary** frames. Use 16 kHz mono signed
+16-bit little-endian PCM. Extra fields can be merged into the `start` frame with
+`options.extra`.
+
+## Events
+
+| Callback | When | Arguments |
+| --- | --- | --- |
+| `ready` | Server handshake. | `{ model, raw }` |
+| `final` | Final transcript for an utterance. | `(text, raw)` |
+| `error` | Server error frame, or a socket error. | `(message, raw)` |
+| `close` | Socket closed. | `(code, reason)` |
+
+Server frames are JSON: `ready`, `final`, `error`.
+
+## The returned handle
+
+| Member | Type | Notes |
+| --- | --- | --- |
+| `sendAudio(chunk)` | `(Uint8Array) => void` | No-op unless the socket is open. |
+| `stop()` | `() => void` | Sends `{type:"stop"}` then closes with code `1000`. |
+| `closed` | `Promise<void>` | Resolves when the socket closes. |
+
+`stop()` tells the server the utterance ended so it can flush a final transcript
+before the socket closes.
+
+## Requirements
+
+Streaming needs a `WebSocket` implementation. In Node 18 through 21 there is no
+global `WebSocket`, so inject one. From Node 22 the global exists.
+
+```ts
+import WebSocket from "ws";
+import { PatientDesk } from "patientdesk-sdk";
+
+const pd = new PatientDesk({ apiKey, WebSocket });
+```
+
+If no implementation is available, `transcribeStream()` throws a
+`PatientDeskError` with code `no_websocket` before opening anything.
+
+## Full example
+
+```ts
+const stream = pd.audio.transcribeStream({
+  final: (text) => transcript.push(text),
+});
+
+// 160 ms of silence-trimmed 16 kHz mono PCM per frame
+for await (const frame of microphoneFrames()) {
+  stream.sendAudio(frame);
+}
+stream.stop();
+await stream.closed;
+console.log(transcript.join(" "));
+```
+
+## Limits
+
+The endpoint is undocumented, so there is no SLA. Expect the framing, the sample
+rate and the event names to be the moving parts if PatientDesk changes it. Pin a
+version and read [Testing](testing.md) to see how the live suite covers it.
+
+---
+
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/recipes.md
+
+# Node.js recipes
+
+Real-life examples for the two things people build first: speak text, and turn
+speech into text. Every recipe is a runnable file under [`examples/`](../examples)
+and needs no npm dependency. The only external tool is `ffmpeg` (with `ffplay`)
+for recording and playback.
+
+```sh
+# macOS / Linux
+export PATIENDESK_API_KEY="pd_live_..."
+
+# Windows PowerShell
+$env:PATIENDESK_API_KEY="pd_live_..."
+```
+
+Install ffmpeg if you do not have it:
+
+```sh
+# Windows
+winget install Gyan.FFmpeg
+
+# macOS
+brew install ffmpeg
+
+# Debian or Ubuntu
+sudo apt install ffmpeg
+```
+
+| Recipe | File | What it does |
+| --- | --- | --- |
+| Speak and play | `examples/tts.mjs` | Alania to a file, then plays it. `--stream` plays while it downloads. |
+| Transcribe a file | `examples/stt-file.mjs` | Duyu over REST, with `verbose_json`, `srt` and `vtt`. |
+| Record then transcribe | `examples/stt-mic.mjs` | Records the microphone with ffmpeg, then transcribes it. |
+| Live microphone | `examples/stt-live.mjs` | Streams the microphone to Duyu over WebSocket. |
+
+## Speak text and hear it
+
+The shortest path: one call, save the bytes, play the file.
+
+```ts
+import { writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { PatientDesk } from "patientdesk-sdk";
+
+const run = promisify(execFile);
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+async function speak(text: string) {
+  const speech = await pd.speech.create({ input: text, response_format: "wav" });
+  await writeFile("randevu.wav", new Uint8Array(await speech.arrayBuffer()));
+  // ffplay ships with ffmpeg and plays on every desktop OS.
+  await run("ffplay", ["-autoexit", "-nodisp", "-loglevel", "quiet", "randevu.wav"]);
+}
+
+await speak("Randevunuz yarın saat 14:05 için oluşturuldu.");
+```
+
+### Low latency playback
+
+For a voice assistant you want audio to start before the whole file arrives.
+Ask for raw PCM and pipe it to `ffplay` as it streams.
+
+```ts
+import { spawn } from "node:child_process";
+import { PatientDesk } from "patientdesk-sdk";
+
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+async function speakStreaming(text: string) {
+  const response = await pd.speech.createRaw({ input: text, response_format: "pcm" });
+
+  const player = spawn("ffplay", [
+    "-autoexit", "-nodisp", "-loglevel", "quiet",
+    "-f", "s16le", "-ar", "24000", "-ac", "1", "-i", "-",
+  ]);
+  response.body.pipe(player.stdin);
+  await new Promise((resolve) => player.on("close", resolve));
+}
+
+await speakStreaming("Bir saniye, kaydınızı kontrol ediyorum.");
+```
+
+`pcm` is uncompressed 16-bit mono, so the sample rate and channel count are
+fixed. `wav` is 24 kHz mono.
+
+Run it:
+
+```sh
+node examples/tts.mjs "Randevunuz oluşturuldu."
+node examples/tts.mjs "Merhaba" --stream
+```
+
+## Transcribe a file
+
+Send the bytes and read the transcript. Duyu takes base64 JSON, the SDK encodes
+it for you.
+
+```ts
+import { readFile } from "node:fs/promises";
+import { PatientDesk } from "patientdesk-sdk";
+
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+const audio = await readFile("kayit.m4a");
+const { text, language, duration } = await pd.audio.transcribe({
+  audio: new Uint8Array(audio),
+  audio_format: "m4a",
+  language: "tr",
+});
+
+console.log(`${language} ${duration}s`);
+console.log(text);
+```
+
+For subtitles, ask for `srt` or `vtt` and write the string straight to a file.
+
+```ts
+const srt = await pd.audio.transcribe({
+  audio: new Uint8Array(await readFile("interview.mp3")),
+  response_format: "srt",
+});
+await writeFile("interview.srt", srt);
+```
+
+Run it:
+
+```sh
+node examples/stt-file.mjs kayit.m4a
+node examples/stt-file.mjs kayit.wav --verbose
+node examples/stt-file.mjs interview.mp3 --format srt > interview.srt
+```
+
+## Record from the microphone, then transcribe
+
+There is no bundled microphone API, but ffmpeg captures the default input on
+every platform. Record a WAV, then send it.
+
+```ts
+import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { PatientDesk } from "patientdesk-sdk";
+
+function record(seconds: number, out: string) {
+  // Windows needs a DirectShow device name. Use "ffmpeg -f dshow -list_devices true -i dummy"
+  // to find it, or see examples/audio.mjs which discovers it for you.
+  const input =
+    process.platform === "darwin"
+      ? ["-f", "avfoundation", "-i", ":0"]
+      : process.platform === "win32"
+        ? ["-f", "dshow", "-i", `audio=${process.env.MIC_DEVICE}`]
+        : ["-f", "alsa", "-i", "default"];
+
+  return new Promise((resolve, reject) => {
+    const ff = spawn("ffmpeg", [
+      "-hide_banner", "-loglevel", "error", "-y",
+      ...input,
+      "-t", String(seconds),
+      "-ar", "16000", "-ac", "1",
+      out,
+    ]);
+    ff.on("close", (code) => (code === 0 ? resolve(out) : reject(new Error(`ffmpeg ${code}`))));
+  });
+}
+
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+await record(5, "mic.wav");
+const { text } = await pd.audio.transcribe({
+  audio: new Uint8Array(await readFile("mic.wav")),
+  audio_format: "wav",
+  language: "tr",
+});
+console.log(text);
+```
+
+`examples/audio.mjs` wraps this, including device discovery on Windows.
+
+Run it:
+
+```sh
+node examples/stt-mic.mjs 5
+node examples/stt-mic.mjs 5 --keep --out kayit.wav
+```
+
+## Live microphone over WebSocket
+
+For a live assistant, streaming is lower latency than record-then-send. It is
+undocumented and experimental, so read [Streaming](streaming.md) first.
+
+```ts
+import { spawn } from "node:child_process";
+import { PatientDesk } from "patientdesk-sdk";
+
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+const stream = pd.audio.transcribeStream({
+  final: (text) => console.log("final:", text),
+  error: (message) => console.error(message),
+});
+
+// 16 kHz mono signed 16-bit PCM, exactly what the endpoint expects.
+const ff = spawn("ffmpeg", [
+  "-hide_banner", "-loglevel", "error",
+  "-f", "avfoundation", "-i", ":0",
+  "-ar", "16000", "-ac", "1", "-f", "s16le", "-",
+]);
+ff.stdout.on("data", (chunk) => stream.sendAudio(new Uint8Array(chunk)));
+
+process.on("SIGINT", () => {
+  ff.kill("SIGKILL");
+  stream.stop();
+});
+await stream.closed;
+```
+
+Run it:
+
+```sh
+node examples/stt-live.mjs 10
+```
+
+Node 22 and later ship a global `WebSocket`. On older versions pass one to the
+client: `new PatientDesk({ apiKey, WebSocket })`.
+
+## Telling "us" from PatientDesk
+
+If a valid file comes back as `undecodable_audio`, it is a service-side decode
+error and not your input. Check the service first, then retry.
+
+```ts
+import { fetchStatus, isOperational } from "patientdesk-sdk";
+
+if (!isOperational(await fetchStatus())) {
+  console.warn("PatientDesk is degraded, try again later");
+}
+```
+
+See [Testing](testing.md) for how the live suite attributes these faults, and
+[Troubleshooting](troubleshooting.md) for the common messages.
+
+---
+
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/configuration.md
+
+# Configuration
+
+All client options are optional except the API key, which can come from the
+environment.
+
+## Constructor
+
+```ts
+import { PatientDesk } from "patientdesk-sdk";
+
+const pd = new PatientDesk({
+  apiKey: process.env.PATIENDESK_API_KEY,
+  baseUrl: "https://voice.patientdesk.ai/v1",
+  maxRetries: 2,
+  timeout: 120_000,
+  defaultHeaders: { "x-app": "my-clinic" },
+});
+```
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `apiKey` | `string` | `PATIENDESK_API_KEY`, then `PATIENDESK_KEY` | Required. Missing throws. |
+| `baseUrl` | `string` | `https://voice.patientdesk.ai/v1` | Trailing slashes are trimmed. |
+| `fetch` | `typeof fetch` | global `fetch` | Inject for tests or edge runtimes. |
+| `WebSocket` | `WebSocketConstructor` | global `WebSocket` | Needed only for streaming STT. |
+| `maxRetries` | `number` | `2` | Retries for 429, 5xx and network errors. |
+| `timeout` | `number` | `120000` | Per-request milliseconds. `0` disables. |
+| `defaultHeaders` | `Record<string, string>` | `{}` | Merged into every request. |
+
+## Environment variables
+
+| Variable | Read by | Notes |
+| --- | --- | --- |
+| `PATIENDESK_API_KEY` | `PatientDesk`, `full-test`, `fixtures` | Preferred key. |
+| `PATIENDESK_KEY` | same | Fallback if the first is unset. |
+| `PATIENDESK_BASE_URL` | live tests | Override the API base URL. |
+| `PATIENDESK_ALLOW_API_FAULTS` | live tests | `1` downgrades PatientDesk faults to skipped. |
+
+## Constants and exports
+
+| Export | Value | Notes |
+| --- | --- | --- |
+| `DEFAULT_BASE_URL` | `https://voice.patientdesk.ai/v1` | |
+| `DEFAULT_STATUS_URL` | `https://status.patientdesk.ai/api/v2/status.json` | |
+| `RETRYABLE_STATUS` | a `ReadonlySet<number>` | `408, 409, 425, 429, 500, 502, 503, 504`. |
+| `MAX_INPUT_CHARS` | `5000` | Alania input limit. |
+| `MAX_AUDIO_BYTES` | `9 * 1024 * 1024` | Duyu audio limit. |
+| `CONTENT_TYPE` | a format to MIME map | Used by `SpeechResponse.contentType`. |
+
+## Custom `fetch`
+
+Useful for logging, tests or a proxy. Any function with the `fetch` signature is
+accepted.
+
+```ts
+const pd = new PatientDesk({
+  apiKey,
+  fetch: (input, init) => {
+    console.log(input);
+    return fetch(input, init);
+  },
+});
+```
+
+## Custom `WebSocket`
+
+Node 18 through 21 have no global `WebSocket`. Inject one for streaming.
+
+```ts
+import WebSocket from "ws";
+
+const pd = new PatientDesk({ apiKey, WebSocket });
+```
+
+## Edge runtimes
+
+Because the SDK uses globals and has no dependencies, it runs on Cloudflare
+Workers, Deno and Bun. Provide `apiKey` explicitly on runtimes without
+`process.env`.
+
+---
+
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/errors.md
+
+# Errors
+
+Every non-2xx response, and every transport failure the client wraps, throws a
+`PatientDeskError`. It carries the parsed PatientDesk error shape plus the
+rate-limit fields, so you can schedule a retry from `resetsAt`.
+
+## Catching
+
+```ts
+import { PatientDeskError } from "patientdesk-sdk";
+
+try {
+  await pd.speech.create({ input: "x" });
+} catch (err) {
+  if (err instanceof PatientDeskError) {
+    console.error(err.status, err.code, err.message);
+    if (err.isRateLimit) {
+      console.log(`quota (${err.scope}) resets at ${err.resetsAt}`);
+    }
+  }
+}
+```
+
+## Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `status` | `number` | HTTP status. `0` for a transport or timeout failure. |
+| `code` | `string \| undefined` | e.g. `rate_limit_error`, `model_retired`. |
+| `body` | `unknown` | Parsed error body, when it was JSON. |
+| `reason` | `string \| undefined` | `error.details.reason`. |
+| `scope` | `string \| undefined` | `user` or `pool`. |
+| `retryAfterSeconds` | `number \| undefined` | From `Retry-After` or `details`. |
+| `resetAt` | `string \| undefined` | ISO time from `error.details.resetAt`. |
+| `isRateLimit` | `boolean` (getter) | `true` when `status === 429`. |
+| `resetsAt` | `Date \| null` (getter) | `resetAt`, or now plus `retryAfterSeconds`. |
+
+`resetsAt` returns a `Date` when the server gave either a reset time or a retry
+delay, and `null` otherwise.
+
+## Local validation errors
+
+These throw before any request and are not `PatientDeskError`:
+
+| Error | Cause |
+| --- | --- |
+| `TypeError` | Empty `input`, missing `audio`, empty audio, wrong audio type. |
+| `RangeError` | `input` over 5,000 characters. |
+
+Client construction errors are `PatientDeskError`:
+
+| Code | Cause |
+| --- | --- |
+| `missing_api_key` | No key passed and no env var set. |
+| `no_fetch` | No global `fetch` and none injected. |
+| `no_websocket` | Streaming without a `WebSocket` implementation. |
+| `no_base64` | No `btoa` or `Buffer` for the STT payload. |
+
+## Retries and backoff
+
+The client retries automatically on `408`, `409`, `425`, `429`, `500`, `502`,
+`503`, `504`, and on network failures. Everything else `4xx` is returned at once.
+
+- Default `maxRetries` is `2`, so up to 3 attempts.
+- When a `Retry-After` header is present, the wait is capped at 30 seconds.
+- Otherwise the delay grows exponentially, base `250 ms`, capped at `4 s`, with a
+  small jitter.
+
+A timeout aborts the request after `timeout` milliseconds, `120000` by default.
+Set `timeout: 0` to disable it.
+
+```ts
+const pd = new PatientDesk({ apiKey, maxRetries: 0, timeout: 30_000 });
+```
+
+## Mapping the message
+
+The message comes from `error.message` in the body, then falls back to
+`PatientDesk HTTP <status>`. The code comes from `error.code`.
+
+## Reading the body once
+
+The error is built from a clone of the response, so the original body is left
+untouched. The client never retries a non-retryable `4xx`.
+
+---
+
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/health-and-status.md
+
+# Health and status
+
+PatientDesk publishes a public Statuspage. The SDK ships a standalone helper for
+it that takes **no API key**, so a test run can check service health before
+touching the paid endpoints.
+
+## Endpoint
+
+```
+GET https://status.patientdesk.ai/api/v2/status.json
+```
+
+## Usage
+
+```ts
+import { fetchStatus, isOperational, statusDescription } from "patientdesk-sdk";
+
+const status = await fetchStatus();
+console.log(statusDescription(status)); // "All Systems Operational"
+if (!isOperational(status)) {
+  throw new Error("PatientDesk is degraded, skipping live checks");
+}
+```
+
+## Functions
+
+| Function | Returns | Notes |
+| --- | --- | --- |
+| `fetchStatus(options?)` | `Promise<StatusResponse>` | Fetches and parses the summary. |
+| `isOperational(status)` | `boolean` | `false` when the indicator is not `none`. |
+| `statusDescription(status)` | `string` | The human summary, or `"unknown"`. |
+
+`isOperational` treats `minor`, `major`, `critical` and `maintenance` as
+degraded. Anything else, including a missing indicator, returns `false` only for
+a missing indicator.
+
+## Options
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `url` | `string` | the endpoint above | Override the status endpoint. |
+| `fetch` | `typeof fetch` | global `fetch` | Inject a fetch. |
+| `timeout` | `number` | `10000` | Milliseconds. `0` disables. |
+| `signal` | `AbortSignal` | unset | Cancel the request. |
+| `retries` | `number` | `1` | Retries on network errors and 5xx. |
+
+Unlike `PatientDesk.request`, this helper does not wrap failures in
+`PatientDeskError`. It throws the underlying error, which makes it easy to call
+from a preflight script.
+
+## Response shape
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `status.indicator` | `string` | `none`, `minor`, `major`, `critical`, `maintenance`. |
+| `status.description` | `string` | e.g. `All Systems Operational`. |
+| `page.name` | `string` | The status page name. |
+| `page.updated_at` | `string` | ISO time of the last update. |
+
+The full body is preserved, so any extra field Statuspage adds is available.
+
+## Using it as a preflight
+
+`scripts/preflight.mjs` does exactly this: it requires `PATIENDESK_API_KEY`, calls
+`fetchStatus`, and stops the live suite with one message when the service is not
+fully operational. See [Testing](testing.md).
+
+---
+
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/testing.md
+
+# Testing
+
+Testing is the point of this repository, so it is split in two suites on
+purpose. One proves the SDK is correct with no key and no network. The other
+proves it against the real service and names the faulty side when it breaks.
+
+| Command | Needs key | Hits the network | Purpose |
+| --- | --- | --- | --- |
+| `npm test` | no | no | Unit and contract tests with a mock `fetch` and `WebSocket`. |
+| `npm run full-test` | **yes** | **yes** | The unit suite, a preflight, then live tests. |
+
+## Unit suite, `npm test`
+
+Builds the package, then runs every file under `test/unit`. It injects a mock
+`fetch` and a local WebSocket double, so it is deterministic and offline. It
+covers:
+
+- the client: auth headers, retries, backoff, timeouts and abort signals
+- TTS: body building, format mapping, `createRaw`, input validation
+- STT: base64 encoding, every `response_format`, format detection
+- streaming: the `start` frame, binary sends, `final` handling, `stop()`
+- errors: parsing, rate-limit fields, `resetsAt`
+- status: indicators and descriptions
+- down behavior: what happens when the service answers with an outage
+
+## Preflight
+
+`npm run full-test` runs `scripts/preflight.mjs` before any live call. It:
+
+1. requires `PATIENDESK_API_KEY`, otherwise exits non-zero with the exact
+   PowerShell or shell line to set it
+2. calls `fetchStatus` and checks `isOperational`
+3. writes `test/.live-enabled=1` only on success
+
+If either check fails it writes `0`, prints one actionable message, and stops.
+Live tests do not run. There is never a silent green.
+
+```sh
+# macOS / Linux
+export PATIENDESK_API_KEY="pd_live_..."
+npm run full-test
+
+# Windows PowerShell
+$env:PATIENDESK_API_KEY="pd_live_..."
+npm run full-test
+```
+
+## Deciding is it us or is it PatientDesk
+
+Live failures are classified by fault party:
+
+- `SDK FAULT while ...`: the request was well formed, so the failure is ours.
+- `PATIENDESK API FAULT while ...`: PatientDesk surfaced its own internal error,
+  for example `undecodable_audio` for a valid file, or a bundled stack trace.
+
+Both **fail the run by default**, but the message names the culprit. The
+classifier lives in `helpers/live.mjs` and matches known upstream patterns such
+as `unexpected keyword`, `not subscriptable` and `Line N`.
+
+To keep a genuine outage from looking like a broken repository, downgrade API
+faults to skipped. They are still printed, never hidden:
+
+```sh
+PATIENDESK_ALLOW_API_FAULTS=1 npm run full-test
+```
+
+## Fixtures
+
+Test fixtures under `test/fixtures/` are real Turkish speech generated with
+Alania, converted with `ffmpeg` into `wav`, `m4a`, `mp3`, `ogg`, `webm`, `flac`
+and 16 kHz raw PCM, plus a deliberately truncated WAV for the decode-error path.
+
+```sh
+npm run fixtures
+```
+
+The script uses `PATIENDESK_API_KEY` when it is set. Without a key it writes a
+synthetic tone so the offline layout is still complete, and it says so.
+
+## Live suites
+
+The live tests under `test/live/` cover TTS, STT over REST, and the WebSocket
+stream. They read the `.live-enabled` flag, so running them directly without
+preflight skips rather than fails.
+
+## Adding a test
+
+Put offline tests in `test/unit` and import the built package from `dist`. Put
+live tests in `test/live` and wrap the body with `guard(t, context, fn)` from
+`helpers/live.mjs` so a service fault is attributed, not blamed on the SDK.
+
+---
+
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/troubleshooting.md
+
+# Troubleshooting
+
+Every message below comes from a real path in the SDK or the test scripts. Start
+here when something fails and the reason is not obvious.
+
+## `Missing API key`
+
+The client throws a `PatientDeskError` with code `missing_api_key` when neither
+`apiKey` nor `PATIENDESK_API_KEY` nor `PATIENDESK_KEY` is set. Set the env var or
+pass the key.
+
+```ts
+const pd = new PatientDesk({ apiKey: "pd_live_..." });
+```
+
+## `No global fetch found`
+
+The runtime has no `fetch`. Pass one, or upgrade to Node 18+.
+
+```ts
+const pd = new PatientDesk({ apiKey, fetch: myFetch });
+```
+
+## `No WebSocket available`
+
+Streaming needs a `WebSocket`. Node 18 through 21 do not ship one. Inject `ws`.
+
+```ts
+import WebSocket from "ws";
+const pd = new PatientDesk({ apiKey, WebSocket });
+```
+
+## `input is N characters`
+
+Alania accepts at most 5,000 characters. Split the text and join the audio, see
+[Text to speech](text-to-speech.md#splitting-long-text).
+
+## STT returns `undecodable_audio`
+
+This is a server-side error. The request was well formed, PatientDesk could not
+decode the audio. It has been seen for valid WAV, MP3 and M4A files, and it was
+confirmed with a working key on a fully operational service, so it is not a sign
+of a bad file, a bad key or a bad SDK. The live suite labels it
+`PATIENDESK API FAULT`.
+
+Two message shapes appear. One is `[Errno 1094995529] Invalid data found when
+processing input: '<none>'`, the other is a Python error such as
+`open() got an unexpected keyword argument 'metadata_errors'`. Both mean the
+same thing: the decode step failed inside the service.
+
+Check the service first with `fetchStatus`. If it is operational and the error
+persists, it is on PatientDesk's side. The `full-test` run reports it as
+`PATIENDESK API FAULT while transcribing ...` and can be downgraded to skipped
+with `PATIENDESK_ALLOW_API_FAULTS=1` while the outage lasts.
+
+## Streaming never becomes ready
+
+The WebSocket endpoint uses a `token` query parameter, not `key`. With `key` the
+socket connects but no `ready` frame ever arrives. With any other name the
+service answers `missing_api_key`. This changed over time, so older clients that
+still send `key` fail silently. See [Streaming](streaming.md#a-known-endpoint-change).
+
+The handshake is also intermittently refused: a fresh socket sometimes closes
+with code `1006` before `ready`, roughly one attempt in five. Retry two or three
+times before treating it as a client bug.
+
+When the connection is ready and you still get no `final`, check the audio. It
+must be 16 kHz mono signed 16-bit little-endian PCM and contain speech. Silence,
+tones or the wrong framing never produce a transcript.
+
+## `429` rate limit
+
+The client raises a `PatientDeskError` with `isRateLimit` true. Read `scope` to
+see whether it is a `user` or `pool` limit, and `resetsAt` for the reset time.
+The client already retried twice, honouring `Retry-After`. Back off until
+`resetsAt`, then retry.
+
+```ts
+if (err instanceof PatientDeskError && err.isRateLimit) {
+  await sleep(err.resetsAt!.getTime() - Date.now());
+}
+```
+
+## Requests hang
+
+A request times out after `timeout` milliseconds, `120000` by default. Lower it
+when a long call is not expected:
+
+```ts
+const pd = new PatientDesk({ apiKey, timeout: 30_000 });
+```
+
+An already-aborted `AbortSignal` fails immediately instead of hanging, so
+cancellation is safe at any point.
+
+## `full-test` does not run
+
+The preflight stopped it. Either the key is missing, or the Statuspage is not
+fully operational. The message names which. Unit tests still run with
+`npm test`. If the service is degraded, retry later, or set
+`PATIENDESK_ALLOW_API_FAULTS=1` to downgrade API faults to skipped.
+
+## Live tests fail with `SDK FAULT`
+
+That is a genuine bug in this repository. Read the context after `while`, which
+names the operation, and open an issue with the full output. Do not set
+`PATIENDESK_ALLOW_API_FAULTS` to hide it: that flag only affects API faults.
+
+## Docs do not build
+
+`npm run docs:build` needs the `marked` dev dependency. Run `npm install` first.
+The generated HTML, `search-index.json`, `llms.txt`, `llms-full.txt` and
+`sitemap.xml` are written under `docs/`.
+
+---

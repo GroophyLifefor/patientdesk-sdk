@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speech to text · patientdesk-sdk docs</title>
+  <meta name="description" content="Duyu is PatientDesk's speech-to-text model. The public endpoint is `POST /audio/transcriptions` and it takes **base64 audio in a JSON body**. There is no multipart upload and no `…">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/speech-to-text.html">
+  <meta property="og:title" content="Speech to text · patientdesk-sdk docs">
+  <meta property="og:description" content="Duyu is PatientDesk's speech-to-text model. The public endpoint is `POST /audio/transcriptions` and it takes **base64 audio in a JSON body**. There is no multipart upload and no `…">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="speech-to-text.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html" class="active">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="speech-to-text">Speech to text</h1>
+<p>Duyu is PatientDesk&#39;s speech-to-text model. The public endpoint is
+<code>POST /audio/transcriptions</code> and it takes <strong>base64 audio in a JSON body</strong>. There
+is no multipart upload and no <code>file_id</code>.</p>
+<h2 id="basic-call">Basic call</h2>
+<pre><code class="language-ts">import { readFileSync } from &quot;node:fs&quot;;
+
+const { text } = await pd.audio.transcribe({
+  audio: readFileSync(&quot;kayit.m4a&quot;),
+  audio_format: &quot;m4a&quot;,   // optional, detected from the first bytes otherwise
+  language: &quot;tr&quot;,        // &quot;tr&quot; (default) or &quot;auto&quot;
+  prompt: &quot;ilaç: parol&quot;, // optional spelling hint
+});
+console.log(text);
+</code></pre>
+<p>You can pass raw bytes, an <code>ArrayBuffer</code> or a <code>Blob</code>. Prefer <code>audio_format</code> when
+you know it, and let the server detect it when you do not.</p>
+<h2 id="parameters">Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>audio</code></td>
+<td><code>Uint8Array | ArrayBuffer | Blob</code></td>
+<td>none</td>
+<td>Provide <code>audio</code> or <code>audioBase64</code>.</td>
+</tr>
+<tr>
+<td><code>audioBase64</code></td>
+<td><code>string</code></td>
+<td>none</td>
+<td>Pre-encoded audio, no data URL prefix.</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td><code>string</code></td>
+<td><code>&quot;duyu-1&quot;</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>audio_format</code></td>
+<td><code>SttFormat</code></td>
+<td>detected</td>
+<td><code>wav</code>, <code>mp3</code>, <code>m4a</code>, <code>webm</code>, <code>ogg</code>, <code>flac</code>.</td>
+</tr>
+<tr>
+<td><code>language</code></td>
+<td><code>string</code></td>
+<td><code>&quot;tr&quot;</code></td>
+<td><code>tr</code>, <code>auto</code>, or a full code.</td>
+</tr>
+<tr>
+<td><code>prompt</code></td>
+<td><code>string</code></td>
+<td>unset</td>
+<td>Names, drug names, ID formats.</td>
+</tr>
+<tr>
+<td><code>temperature</code></td>
+<td><code>number</code></td>
+<td><code>0</code></td>
+<td>Between 0 and 1.</td>
+</tr>
+<tr>
+<td><code>response_format</code></td>
+<td><code>SttResponseFormat</code></td>
+<td><code>&quot;json&quot;</code></td>
+<td><code>json</code>, <code>text</code>, <code>verbose_json</code>, <code>srt</code>, <code>vtt</code>.</td>
+</tr>
+<tr>
+<td><code>timestamp_granularities</code></td>
+<td><code>(&quot;segment&quot; | &quot;word&quot;)[]</code></td>
+<td>unset</td>
+<td>Only with <code>verbose_json</code>.</td>
+</tr>
+<tr>
+<td><code>extra</code></td>
+<td><code>Record&lt;string, unknown&gt;</code></td>
+<td>unset</td>
+<td>Merged into the body.</td>
+</tr>
+</tbody></table>
+<p>The maximum audio size is about 9 MB per request.</p>
+<h2 id="response-shapes">Response shapes</h2>
+<p><code>response_format</code> decides the return type, and the overloads reflect it.</p>
+<table>
+<thead>
+<tr>
+<th><code>response_format</code></th>
+<th>Returns</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>omitted or <code>json</code></td>
+<td><code>Transcription</code></td>
+</tr>
+<tr>
+<td><code>verbose_json</code></td>
+<td><code>Transcription</code> with <code>segments</code> and <code>words</code></td>
+</tr>
+<tr>
+<td><code>text</code>, <code>srt</code>, <code>vtt</code></td>
+<td><code>string</code></td>
+</tr>
+</tbody></table>
+<pre><code class="language-ts">// verbose_json -&gt; segments and word timings
+const detailed = await pd.audio.transcribe({
+  audio: bytes,
+  response_format: &quot;verbose_json&quot;,
+  timestamp_granularities: [&quot;word&quot;],
+});
+for (const w of detailed.words ?? []) {
+  console.log(`${w.start.toFixed(2)}s ${w.word}`);
+}
+
+// srt -&gt; the subtitle text itself
+const srt = await pd.audio.transcribe({ audio: bytes, response_format: &quot;srt&quot; });
+</code></pre>
+<p>The <code>Transcription</code> shape:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>text</code></td>
+<td><code>string</code></td>
+<td>The transcript.</td>
+</tr>
+<tr>
+<td><code>task</code></td>
+<td><code>string</code></td>
+<td>e.g. <code>transcribe</code>.</td>
+</tr>
+<tr>
+<td><code>language</code></td>
+<td><code>string</code></td>
+<td>Detected or requested language.</td>
+</tr>
+<tr>
+<td><code>duration</code></td>
+<td><code>number</code></td>
+<td>Seconds, when reported.</td>
+</tr>
+<tr>
+<td><code>segments</code></td>
+<td><code>TranscriptionSegment[]</code></td>
+<td>With <code>verbose_json</code>.</td>
+</tr>
+<tr>
+<td><code>words</code></td>
+<td><code>TranscriptionWord[]</code></td>
+<td>With <code>verbose_json</code> and word granularity.</td>
+</tr>
+</tbody></table>
+<h2 id="base64-helper">Base64 helper</h2>
+<p><code>toBase64()</code> is exported if you need to build the payload yourself. A <code>data:</code>
+URL prefix is stripped automatically when you pass <code>audioBase64</code>.</p>
+<pre><code class="language-ts">import { toBase64 } from &quot;patientdesk-sdk&quot;;
+
+const b64 = toBase64(new Uint8Array(buf)); // no data: prefix
+await pd.audio.transcribe({ audioBase64: b64, audio_format: &quot;wav&quot; });
+</code></pre>
+<h2 id="live-transcription">Live transcription</h2>
+<p>For microphone use, the WebSocket session is lower latency than the REST call.
+It is undocumented and experimental, so it lives on its own page:
+<a href="streaming.html">Streaming</a>.</p>
+<h2 id="service-side-decodes">Service-side decodes</h2>
+<p>PatientDesk&#39;s REST endpoint has been observed returning <code>400 undecodable_audio</code>,
+or a bundled internal stack trace, for perfectly valid files. Those are upstream
+faults. The live suite labels them for you, see <a href="testing.html">Testing</a>.</p></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#basic-call">Basic call</a></li>
+          <li><a href="#parameters">Parameters</a></li>
+          <li><a href="#response-shapes">Response shapes</a></li>
+          <li><a href="#base64-helper">Base64 helper</a></li>
+          <li><a href="#live-transcription">Live transcription</a></li>
+          <li><a href="#service-side-decodes">Service-side decodes</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Getting started · patientdesk-sdk docs</title>
+  <meta name="description" content="`patientdesk-sdk` is an **unofficial** client for PatientDesk's Turkish voice models. It wraps **Alania** text-to-speech and **Duyu** speech-to-text, plus a keyless Statuspage hea…">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/getting-started.html">
+  <meta property="og:title" content="Getting started · patientdesk-sdk docs">
+  <meta property="og:description" content="`patientdesk-sdk` is an **unofficial** client for PatientDesk's Turkish voice models. It wraps **Alania** text-to-speech and **Duyu** speech-to-text, plus a keyless Statuspage hea…">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="getting-started.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html" class="active">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="getting-started">Getting started</h1>
+<p><code>patientdesk-sdk</code> is an <strong>unofficial</strong> client for PatientDesk&#39;s Turkish voice
+models. It wraps <strong>Alania</strong> text-to-speech and <strong>Duyu</strong> speech-to-text, plus a
+keyless Statuspage health check. It has zero runtime dependencies and uses the
+global <code>fetch</code> and <code>WebSocket</code>, both of which can be injected.</p>
+<blockquote>
+<p>Not affiliated with, endorsed by, or supported by PatientDesk. It is an
+independent client for their public, OpenAI-compatible API.</p>
+</blockquote>
+<h2 id="overview">Overview</h2>
+<figure class="mermaid-figure">
+<div class="mermaid-viewport"><div class="mermaid">flowchart LR
+  install[Install package] --> client[new PatientDesk]
+  client --> tts["speech.create()<br/>Alania TTS"]
+  client --> stt["audio.transcribe()<br/>Duyu STT"]
+  client --> stream["audio.transcribeStream()<br/>experimental"]
+  client --> status["fetchStatus()<br/>no API key"]</div></div>
+</figure>
+<p><strong>Need:</strong> <a href="https://nodejs.org/">Node.js 18+</a>, an API key from
+<a href="https://speech.patientdesk.ai">speech.patientdesk.ai</a>. Deno, Bun and edge
+runtimes work too, since only standard globals are used.</p>
+<h2 id="1-install">1. Install</h2>
+<pre class="shell-block"><code><span class="sh-cli">npm</span> <span class="sh-cmd">install</span> <span class="sh-arg">patientdesk-sdk</span>
+</code></pre>
+<h2 id="2-set-the-api-key">2. Set the API key</h2>
+<p>The client reads <code>PATIENDESK_API_KEY</code>, falling back to <code>PATIENDESK_KEY</code>. You can
+also pass it directly to the constructor.</p>
+<pre class="shell-block"><code><span class="sh-comment"># macOS / Linux</span>
+<span class="sh-cli">export</span> <span class="sh-cmd">PATIENDESK_API_KEY=&quot;pd_live_...&quot;</span>
+
+<span class="sh-comment"># Windows PowerShell</span>
+<span class="sh-cli">$env:PATIENDESK_API_KEY=&quot;pd_live_...&quot;</span>
+</code></pre>
+<h2 id="3-first-request">3. First request</h2>
+<pre><code class="language-ts">import { PatientDesk } from &quot;patientdesk-sdk&quot;;
+
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+// Text to speech (Alania)
+const speech = await pd.speech.create({
+  input: &quot;Randevunuz oluşturuldu.&quot;,
+  response_format: &quot;wav&quot;,
+});
+const wav = new Uint8Array(await speech.arrayBuffer());
+
+// Speech to text (Duyu)
+const { text } = await pd.audio.transcribe({
+  audio: wav,
+  audio_format: &quot;wav&quot;,
+  language: &quot;tr&quot;,
+});
+console.log(text);
+</code></pre>
+<h2 id="4-health-check-no-key">4. Health check (no key)</h2>
+<pre><code class="language-ts">import { fetchStatus, isOperational, statusDescription } from &quot;patientdesk-sdk&quot;;
+
+const status = await fetchStatus();
+console.log(statusDescription(status)); // &quot;All Systems Operational&quot;
+console.log(isOperational(status) ? &quot;up&quot; : &quot;degraded&quot;);
+</code></pre>
+<h2 id="what-is-on-the-client">What is on the client</h2>
+<table>
+<thead>
+<tr>
+<th>Member</th>
+<th>Type</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>pd.speech</code></td>
+<td><code>SpeechApi</code></td>
+<td>Alania text-to-speech.</td>
+</tr>
+<tr>
+<td><code>pd.audio</code></td>
+<td><code>AudioApi</code></td>
+<td>Duyu speech-to-text, REST and streaming.</td>
+</tr>
+<tr>
+<td><code>pd.baseUrl</code></td>
+<td><code>string</code></td>
+<td>Resolved API base URL.</td>
+</tr>
+<tr>
+<td><code>pd.apiKey</code></td>
+<td><code>string</code></td>
+<td>Resolved API key.</td>
+</tr>
+<tr>
+<td><code>pd.fetchImpl</code></td>
+<td><code>typeof fetch</code></td>
+<td>The <code>fetch</code> in use.</td>
+</tr>
+<tr>
+<td><code>pd.wsImpl</code></td>
+<td><code>WebSocketConstructor</code></td>
+<td>The <code>WebSocket</code> in use, if any.</td>
+</tr>
+</tbody></table>
+<h2 id="where-to-go-next">Where to go next</h2>
+<ul>
+<li><a href="recipes.html">Node.js recipes</a>: speak, transcribe a file, use the microphone.</li>
+<li><a href="text-to-speech.html">Text to speech</a>: every Alania parameter and output shape.</li>
+<li><a href="speech-to-text.html">Speech to text</a>: formats, timestamps, subtitles.</li>
+<li><a href="streaming.html">Streaming</a>: the experimental WebSocket session.</li>
+<li><a href="errors.html">Errors</a>: retries, backoff and rate limits.</li>
+<li><a href="testing.html">Testing</a>: how to run the offline and live suites.</li>
+</ul>
+<h2 id="not-sure-it-is-us">Not sure it is us</h2>
+<p>Add <code>PATIENDESK_BASE_URL</code> to point the client at a proxy or a mock, and inject a
+custom <code>fetch</code>. See <a href="configuration.html">Configuration</a>.</p></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#1-install">1. Install</a></li>
+          <li><a href="#2-set-the-api-key">2. Set the API key</a></li>
+          <li><a href="#3-first-request">3. First request</a></li>
+          <li><a href="#4-health-check-no-key">4. Health check (no key)</a></li>
+          <li><a href="#what-is-on-the-client">What is on the client</a></li>
+          <li><a href="#where-to-go-next">Where to go next</a></li>
+          <li><a href="#not-sure-it-is-us">Not sure it is us</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

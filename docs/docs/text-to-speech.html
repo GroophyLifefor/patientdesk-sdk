@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Text to speech · patientdesk-sdk docs</title>
+  <meta name="description" content="Alania is PatientDesk's text-to-speech model. One endpoint, `POST /audio/speech`, takes JSON and returns the audio itself as the response body.">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/text-to-speech.html">
+  <meta property="og:title" content="Text to speech · patientdesk-sdk docs">
+  <meta property="og:description" content="Alania is PatientDesk's text-to-speech model. One endpoint, `POST /audio/speech`, takes JSON and returns the audio itself as the response body.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="text-to-speech.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html" class="active">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="text-to-speech">Text to speech</h1>
+<p>Alania is PatientDesk&#39;s text-to-speech model. One endpoint, <code>POST /audio/speech</code>,
+takes JSON and returns the audio itself as the response body.</p>
+<h2 id="basic-call">Basic call</h2>
+<pre><code class="language-ts">const speech = await pd.speech.create({
+  input: &quot;Yarın saat 14:05 için randevunuz var.&quot;,
+  response_format: &quot;mp3&quot;,
+});
+
+speech.contentType; // &quot;audio/mpeg&quot;
+speech.disclosure;  // &quot;ai-generated&quot; (from the X-Disclosure header)
+</code></pre>
+<p><code>create()</code> returns a <code>SpeechResponse</code>, a thin view over the one response body.</p>
+<table>
+<thead>
+<tr>
+<th>Member</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>response</code></td>
+<td><code>Response</code></td>
+<td>The raw response. Its body can be read once.</td>
+</tr>
+<tr>
+<td><code>contentType</code></td>
+<td><code>string</code></td>
+<td>From the <code>Content-Type</code> header, or the format table.</td>
+</tr>
+<tr>
+<td><code>disclosure</code></td>
+<td><code>string | null</code></td>
+<td><code>X-Disclosure</code>, normally <code>ai-generated</code>.</td>
+</tr>
+<tr>
+<td><code>arrayBuffer()</code></td>
+<td><code>Promise&lt;ArrayBuffer&gt;</code></td>
+<td>Whole audio.</td>
+</tr>
+<tr>
+<td><code>blob()</code></td>
+<td><code>Promise&lt;Blob&gt;</code></td>
+<td>Whole audio with the right <code>type</code>.</td>
+</tr>
+<tr>
+<td><code>stream()</code></td>
+<td><code>ReadableStream&lt;Uint8Array&gt; | null</code></td>
+<td>The raw body stream.</td>
+</tr>
+</tbody></table>
+<p>Read the body <strong>once</strong>. Pick one of <code>arrayBuffer</code>, <code>blob</code> or <code>stream</code>.</p>
+<h2 id="parameters">Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>input</code></td>
+<td><code>string</code></td>
+<td>required</td>
+<td>Up to 5,000 characters. Longer text throws <code>RangeError</code>.</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td><code>string</code></td>
+<td><code>&quot;alania-v1&quot;</code></td>
+<td>Aggregators may use a namespaced id.</td>
+</tr>
+<tr>
+<td><code>voice</code></td>
+<td><code>string</code></td>
+<td><code>&quot;alania&quot;</code></td>
+<td>The single built-in voice.</td>
+</tr>
+<tr>
+<td><code>response_format</code></td>
+<td><code>TtsFormat</code></td>
+<td><code>&quot;wav&quot;</code></td>
+<td><code>wav</code>, <code>mp3</code>, <code>opus</code>, <code>flac</code>, <code>aac</code>, <code>pcm</code>.</td>
+</tr>
+<tr>
+<td><code>temperature</code></td>
+<td><code>number</code></td>
+<td>server side <code>0.30</code></td>
+<td><code>0..1</code>, higher is less consistent.</td>
+</tr>
+<tr>
+<td><code>seed</code></td>
+<td><code>number</code></td>
+<td>unset</td>
+<td>Same text and seed are not byte-identical.</td>
+</tr>
+<tr>
+<td><code>extra</code></td>
+<td><code>Record&lt;string, unknown&gt;</code></td>
+<td>unset</td>
+<td>Merged into the body for forward compatibility.</td>
+</tr>
+</tbody></table>
+<p><code>wav</code> output is 24 kHz, mono, 16-bit.</p>
+<h2 id="output-formats">Output formats</h2>
+<table>
+<thead>
+<tr>
+<th><code>response_format</code></th>
+<th><code>contentType</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>wav</code></td>
+<td><code>audio/wav</code></td>
+</tr>
+<tr>
+<td><code>mp3</code></td>
+<td><code>audio/mpeg</code></td>
+</tr>
+<tr>
+<td><code>opus</code></td>
+<td><code>audio/ogg</code></td>
+</tr>
+<tr>
+<td><code>flac</code></td>
+<td><code>audio/flac</code></td>
+</tr>
+<tr>
+<td><code>aac</code></td>
+<td><code>audio/aac</code></td>
+</tr>
+<tr>
+<td><code>pcm</code></td>
+<td><code>audio/L16</code></td>
+</tr>
+</tbody></table>
+<p>When the server sends a <code>Content-Type</code>, it wins over the table.</p>
+<h2 id="low-latency-streaming">Low-latency streaming</h2>
+<p><code>createRaw()</code> skips the wrapper and returns the raw <code>Response</code>, so you can pipe
+<code>response.body</code> to a player without buffering the whole file.</p>
+<pre><code class="language-ts">const response = await pd.speech.createRaw({
+  input: &quot;Randevunuz oluşturuldu.&quot;,
+  response_format: &quot;pcm&quot;,
+});
+
+const reader = response.body!.getReader();
+for (;;) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  player.write(value);
+}
+</code></pre>
+<p>Note: the native API ignores the deprecated <code>stream</code> field and returns the audio
+in one piece. Stream the returned body yourself, as above.</p>
+<h2 id="splitting-long-text">Splitting long text</h2>
+<p>Alania accepts at most 5,000 characters. Split on sentence boundaries and join
+the resulting files with <code>ffmpeg</code> if you need a single recording.</p>
+<pre><code class="language-ts">const chunks = splitBySentence(longText, 5000);
+for (const [i, chunk] of chunks.entries()) {
+  const speech = await pd.speech.create({ input: chunk, response_format: &quot;mp3&quot; });
+  await Deno.writeFile(`part-${i}.mp3`, new Uint8Array(await speech.arrayBuffer()));
+}
+</code></pre>
+<h2 id="errors">Errors</h2>
+<p>Invalid local input throws before any request: <code>TypeError</code> for an empty <code>input</code>,
+<code>RangeError</code> for text over 5,000 characters. Request failures throw
+<code>PatientDeskError</code>. See <a href="errors.html">Errors</a>.</p></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#basic-call">Basic call</a></li>
+          <li><a href="#parameters">Parameters</a></li>
+          <li><a href="#output-formats">Output formats</a></li>
+          <li><a href="#low-latency-streaming">Low-latency streaming</a></li>
+          <li><a href="#splitting-long-text">Splitting long text</a></li>
+          <li><a href="#errors">Errors</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

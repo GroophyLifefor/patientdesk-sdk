@@ -1,7 +1,7 @@
 {
   "name": "patientdesk-sdk",
-  "version": "0.0.2",
-  "description": "Unofficial SDK for PatientDesk Turkish voice models — Alania (text-to-speech) and Duyu (speech-to-text). Placeholder release; the API lands in 0.1.0.",
+  "version": "0.1.0",
+  "description": "Unofficial SDK for PatientDesk Turkish voice models — Alania (text-to-speech) and Duyu (speech-to-text, REST + streaming).",
   "keywords": [
     "patientdesk",
     "alania",
@@ -16,14 +16,19 @@
   ],
   "license": "MIT",
   "type": "module",
-  "main": "./index.js",
-  "module": "./index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./index.js",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [
-    "index.js",
+    "dist",
     "README.md",
     "LICENSE"
   ],
@@ -32,7 +37,18 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --check index.js"
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test --test-timeout=20000 test/unit",
+    "full-test": "npm run build && node --test --test-timeout=20000 test/unit && node scripts/preflight.mjs && node --test --test-timeout=120000 test/live",
+    "preflight": "node scripts/preflight.mjs",
+    "fixtures": "node scripts/fixtures.mjs",
+    "example:tts": "node examples/tts.mjs",
+    "example:stt": "node examples/stt-file.mjs",
+    "example:mic": "node examples/stt-mic.mjs",
+    "example:live": "node examples/stt-live.mjs",
+    "docs:build": "node scripts/build-docs.mjs",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -41,5 +57,11 @@
   "bugs": {
     "url": "https://github.com/GroophyLifefor/patientdesk-sdk/issues"
   },
-  "homepage": "https://github.com/GroophyLifefor/patientdesk-sdk#readme"
+  "homepage": "https://github.com/GroophyLifefor/patientdesk-sdk#readme",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "marked": "^15.0.4",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  }
 }

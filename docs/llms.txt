@@ -1,0 +1,25 @@
+# patientdesk-sdk
+
+> Unofficial TypeScript SDK for PatientDesk Turkish voice models. Alania text-to-speech, Duyu speech-to-text over REST and WebSocket, and a keyless status helper. Zero runtime dependencies.
+
+## Getting started
+
+- [Getting started](https://groophylifefor.github.io/patientdesk-sdk/docs/getting-started.md)
+
+## Guides
+
+- [Text to speech](https://groophylifefor.github.io/patientdesk-sdk/docs/text-to-speech.md)
+- [Speech to text](https://groophylifefor.github.io/patientdesk-sdk/docs/speech-to-text.md)
+- [Streaming](https://groophylifefor.github.io/patientdesk-sdk/docs/streaming.md)
+- [Node.js recipes](https://groophylifefor.github.io/patientdesk-sdk/docs/recipes.md)
+
+## Reference
+
+- [Configuration](https://groophylifefor.github.io/patientdesk-sdk/docs/configuration.md)
+- [Errors](https://groophylifefor.github.io/patientdesk-sdk/docs/errors.md)
+- [Health and status](https://groophylifefor.github.io/patientdesk-sdk/docs/health-and-status.md)
+
+## Testing
+
+- [Testing](https://groophylifefor.github.io/patientdesk-sdk/docs/testing.md)
+- [Troubleshooting](https://groophylifefor.github.io/patientdesk-sdk/docs/troubleshooting.md)

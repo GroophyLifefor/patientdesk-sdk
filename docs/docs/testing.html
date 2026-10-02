@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Testing · patientdesk-sdk docs</title>
+  <meta name="description" content="Testing is the point of this repository, so it is split in two suites on purpose. One proves the SDK is correct with no key and no network. The other proves it against the real se…">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/testing.html">
+  <meta property="og:title" content="Testing · patientdesk-sdk docs">
+  <meta property="og:description" content="Testing is the point of this repository, so it is split in two suites on purpose. One proves the SDK is correct with no key and no network. The other proves it against the real se…">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="testing.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html" class="active">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="testing">Testing</h1>
+<p>Testing is the point of this repository, so it is split in two suites on
+purpose. One proves the SDK is correct with no key and no network. The other
+proves it against the real service and names the faulty side when it breaks.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Needs key</th>
+<th>Hits the network</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>npm test</code></td>
+<td>no</td>
+<td>no</td>
+<td>Unit and contract tests with a mock <code>fetch</code> and <code>WebSocket</code>.</td>
+</tr>
+<tr>
+<td><code>npm run full-test</code></td>
+<td><strong>yes</strong></td>
+<td><strong>yes</strong></td>
+<td>The unit suite, a preflight, then live tests.</td>
+</tr>
+</tbody></table>
+<h2 id="unit-suite-npm-test">Unit suite, <code>npm test</code></h2>
+<p>Builds the package, then runs every file under <code>test/unit</code>. It injects a mock
+<code>fetch</code> and a local WebSocket double, so it is deterministic and offline. It
+covers:</p>
+<ul>
+<li>the client: auth headers, retries, backoff, timeouts and abort signals</li>
+<li>TTS: body building, format mapping, <code>createRaw</code>, input validation</li>
+<li>STT: base64 encoding, every <code>response_format</code>, format detection</li>
+<li>streaming: the <code>start</code> frame, binary sends, <code>final</code> handling, <code>stop()</code></li>
+<li>errors: parsing, rate-limit fields, <code>resetsAt</code></li>
+<li>status: indicators and descriptions</li>
+<li>down behavior: what happens when the service answers with an outage</li>
+</ul>
+<h2 id="preflight">Preflight</h2>
+<p><code>npm run full-test</code> runs <code>scripts/preflight.mjs</code> before any live call. It:</p>
+<ol>
+<li>requires <code>PATIENDESK_API_KEY</code>, otherwise exits non-zero with the exact
+PowerShell or shell line to set it</li>
+<li>calls <code>fetchStatus</code> and checks <code>isOperational</code></li>
+<li>writes <code>test/.live-enabled=1</code> only on success</li>
+</ol>
+<p>If either check fails it writes <code>0</code>, prints one actionable message, and stops.
+Live tests do not run. There is never a silent green.</p>
+<pre class="shell-block"><code><span class="sh-comment"># macOS / Linux</span>
+<span class="sh-cli">export</span> <span class="sh-cmd">PATIENDESK_API_KEY=&quot;pd_live_...&quot;</span>
+<span class="sh-cli">npm</span> <span class="sh-cmd">run</span> <span class="sh-arg">full-test</span>
+
+<span class="sh-comment"># Windows PowerShell</span>
+<span class="sh-cli">$env:PATIENDESK_API_KEY=&quot;pd_live_...&quot;</span>
+<span class="sh-cli">npm</span> <span class="sh-cmd">run</span> <span class="sh-arg">full-test</span>
+</code></pre>
+<h2 id="deciding-is-it-us-or-is-it-patientdesk">Deciding is it us or is it PatientDesk</h2>
+<p>Live failures are classified by fault party:</p>
+<ul>
+<li><code>SDK FAULT while ...</code>: the request was well formed, so the failure is ours.</li>
+<li><code>PATIENDESK API FAULT while ...</code>: PatientDesk surfaced its own internal error,
+for example <code>undecodable_audio</code> for a valid file, or a bundled stack trace.</li>
+</ul>
+<p>Both <strong>fail the run by default</strong>, but the message names the culprit. The
+classifier lives in <code>helpers/live.mjs</code> and matches known upstream patterns such
+as <code>unexpected keyword</code>, <code>not subscriptable</code> and <code>Line N</code>.</p>
+<p>To keep a genuine outage from looking like a broken repository, downgrade API
+faults to skipped. They are still printed, never hidden:</p>
+<pre class="shell-block"><code><span class="sh-cli">PATIENDESK_ALLOW_API_FAULTS=1</span> <span class="sh-cmd">npm</span> <span class="sh-arg">run</span> <span class="sh-arg">full-test</span>
+</code></pre>
+<h2 id="fixtures">Fixtures</h2>
+<p>Test fixtures under <code>test/fixtures/</code> are real Turkish speech generated with
+Alania, converted with <code>ffmpeg</code> into <code>wav</code>, <code>m4a</code>, <code>mp3</code>, <code>ogg</code>, <code>webm</code>, <code>flac</code>
+and 16 kHz raw PCM, plus a deliberately truncated WAV for the decode-error path.</p>
+<pre class="shell-block"><code><span class="sh-cli">npm</span> <span class="sh-cmd">run</span> <span class="sh-arg">fixtures</span>
+</code></pre>
+<p>The script uses <code>PATIENDESK_API_KEY</code> when it is set. Without a key it writes a
+synthetic tone so the offline layout is still complete, and it says so.</p>
+<h2 id="live-suites">Live suites</h2>
+<p>The live tests under <code>test/live/</code> cover TTS, STT over REST, and the WebSocket
+stream. They read the <code>.live-enabled</code> flag, so running them directly without
+preflight skips rather than fails.</p>
+<h2 id="adding-a-test">Adding a test</h2>
+<p>Put offline tests in <code>test/unit</code> and import the built package from <code>dist</code>. Put
+live tests in <code>test/live</code> and wrap the body with <code>guard(t, context, fn)</code> from
+<code>helpers/live.mjs</code> so a service fault is attributed, not blamed on the SDK.</p></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#unit-suite-npm-test">Unit suite, npm test</a></li>
+          <li><a href="#preflight">Preflight</a></li>
+          <li><a href="#deciding-is-it-us-or-is-it-patientdesk">Deciding is it us or is it PatientDesk</a></li>
+          <li><a href="#fixtures">Fixtures</a></li>
+          <li><a href="#live-suites">Live suites</a></li>
+          <li><a href="#adding-a-test">Adding a test</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

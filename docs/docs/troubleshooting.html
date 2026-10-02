@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Troubleshooting · patientdesk-sdk docs</title>
+  <meta name="description" content="Every message below comes from a real path in the SDK or the test scripts. Start here when something fails and the reason is not obvious.">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/troubleshooting.html">
+  <meta property="og:title" content="Troubleshooting · patientdesk-sdk docs">
+  <meta property="og:description" content="Every message below comes from a real path in the SDK or the test scripts. Start here when something fails and the reason is not obvious.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="troubleshooting.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html" class="active">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="troubleshooting">Troubleshooting</h1>
+<p>Every message below comes from a real path in the SDK or the test scripts. Start
+here when something fails and the reason is not obvious.</p>
+<h2 id="missing-api-key"><code>Missing API key</code></h2>
+<p>The client throws a <code>PatientDeskError</code> with code <code>missing_api_key</code> when neither
+<code>apiKey</code> nor <code>PATIENDESK_API_KEY</code> nor <code>PATIENDESK_KEY</code> is set. Set the env var or
+pass the key.</p>
+<pre><code class="language-ts">const pd = new PatientDesk({ apiKey: &quot;pd_live_...&quot; });
+</code></pre>
+<h2 id="no-global-fetch-found"><code>No global fetch found</code></h2>
+<p>The runtime has no <code>fetch</code>. Pass one, or upgrade to Node 18+.</p>
+<pre><code class="language-ts">const pd = new PatientDesk({ apiKey, fetch: myFetch });
+</code></pre>
+<h2 id="no-websocket-available"><code>No WebSocket available</code></h2>
+<p>Streaming needs a <code>WebSocket</code>. Node 18 through 21 do not ship one. Inject <code>ws</code>.</p>
+<pre><code class="language-ts">import WebSocket from &quot;ws&quot;;
+const pd = new PatientDesk({ apiKey, WebSocket });
+</code></pre>
+<h2 id="input-is-n-characters"><code>input is N characters</code></h2>
+<p>Alania accepts at most 5,000 characters. Split the text and join the audio, see
+<a href="text-to-speech.html#splitting-long-text">Text to speech</a>.</p>
+<h2 id="stt-returns-undecodable-audio">STT returns <code>undecodable_audio</code></h2>
+<p>This is a server-side error. The request was well formed, PatientDesk could not
+decode the audio. It has been seen for valid WAV, MP3 and M4A files, and it was
+confirmed with a working key on a fully operational service, so it is not a sign
+of a bad file, a bad key or a bad SDK. The live suite labels it
+<code>PATIENDESK API FAULT</code>.</p>
+<p>Two message shapes appear. One is <code>[Errno 1094995529] Invalid data found when processing input: &#39;&lt;none&gt;&#39;</code>, the other is a Python error such as
+<code>open() got an unexpected keyword argument &#39;metadata_errors&#39;</code>. Both mean the
+same thing: the decode step failed inside the service.</p>
+<p>Check the service first with <code>fetchStatus</code>. If it is operational and the error
+persists, it is on PatientDesk&#39;s side. The <code>full-test</code> run reports it as
+<code>PATIENDESK API FAULT while transcribing ...</code> and can be downgraded to skipped
+with <code>PATIENDESK_ALLOW_API_FAULTS=1</code> while the outage lasts.</p>
+<h2 id="streaming-never-becomes-ready">Streaming never becomes ready</h2>
+<p>The WebSocket endpoint uses a <code>token</code> query parameter, not <code>key</code>. With <code>key</code> the
+socket connects but no <code>ready</code> frame ever arrives. With any other name the
+service answers <code>missing_api_key</code>. This changed over time, so older clients that
+still send <code>key</code> fail silently. See <a href="streaming.html#a-known-endpoint-change">Streaming</a>.</p>
+<p>The handshake is also intermittently refused: a fresh socket sometimes closes
+with code <code>1006</code> before <code>ready</code>, roughly one attempt in five. Retry two or three
+times before treating it as a client bug.</p>
+<p>When the connection is ready and you still get no <code>final</code>, check the audio. It
+must be 16 kHz mono signed 16-bit little-endian PCM and contain speech. Silence,
+tones or the wrong framing never produce a transcript.</p>
+<h2 id="429-rate-limit"><code>429</code> rate limit</h2>
+<p>The client raises a <code>PatientDeskError</code> with <code>isRateLimit</code> true. Read <code>scope</code> to
+see whether it is a <code>user</code> or <code>pool</code> limit, and <code>resetsAt</code> for the reset time.
+The client already retried twice, honouring <code>Retry-After</code>. Back off until
+<code>resetsAt</code>, then retry.</p>
+<pre><code class="language-ts">if (err instanceof PatientDeskError &amp;&amp; err.isRateLimit) {
+  await sleep(err.resetsAt!.getTime() - Date.now());
+}
+</code></pre>
+<h2 id="requests-hang">Requests hang</h2>
+<p>A request times out after <code>timeout</code> milliseconds, <code>120000</code> by default. Lower it
+when a long call is not expected:</p>
+<pre><code class="language-ts">const pd = new PatientDesk({ apiKey, timeout: 30_000 });
+</code></pre>
+<p>An already-aborted <code>AbortSignal</code> fails immediately instead of hanging, so
+cancellation is safe at any point.</p>
+<h2 id="full-test-does-not-run"><code>full-test</code> does not run</h2>
+<p>The preflight stopped it. Either the key is missing, or the Statuspage is not
+fully operational. The message names which. Unit tests still run with
+<code>npm test</code>. If the service is degraded, retry later, or set
+<code>PATIENDESK_ALLOW_API_FAULTS=1</code> to downgrade API faults to skipped.</p>
+<h2 id="live-tests-fail-with-sdk-fault">Live tests fail with <code>SDK FAULT</code></h2>
+<p>That is a genuine bug in this repository. Read the context after <code>while</code>, which
+names the operation, and open an issue with the full output. Do not set
+<code>PATIENDESK_ALLOW_API_FAULTS</code> to hide it: that flag only affects API faults.</p>
+<h2 id="docs-do-not-build">Docs do not build</h2>
+<p><code>npm run docs:build</code> needs the <code>marked</code> dev dependency. Run <code>npm install</code> first.
+The generated HTML, <code>search-index.json</code>, <code>llms.txt</code>, <code>llms-full.txt</code> and
+<code>sitemap.xml</code> are written under <code>docs/</code>.</p></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#missing-api-key">Missing API key</a></li>
+          <li><a href="#no-global-fetch-found">No global fetch found</a></li>
+          <li><a href="#no-websocket-available">No WebSocket available</a></li>
+          <li><a href="#input-is-n-characters">input is N characters</a></li>
+          <li><a href="#stt-returns-undecodable-audio">STT returns undecodable_audio</a></li>
+          <li><a href="#streaming-never-becomes-ready">Streaming never becomes ready</a></li>
+          <li><a href="#429-rate-limit">429 rate limit</a></li>
+          <li><a href="#requests-hang">Requests hang</a></li>
+          <li><a href="#full-test-does-not-run">full-test does not run</a></li>
+          <li><a href="#live-tests-fail-with-sdk-fault">Live tests fail with SDK FAULT</a></li>
+          <li><a href="#docs-do-not-build">Docs do not build</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

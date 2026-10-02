@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Node.js recipes · patientdesk-sdk docs</title>
+  <meta name="description" content="Real-life examples for the two things people build first: speak text, and turn speech into text. Every recipe is a runnable file under [`examples/`](../examples) and needs no npm…">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/recipes.html">
+  <meta property="og:title" content="Node.js recipes · patientdesk-sdk docs">
+  <meta property="og:description" content="Real-life examples for the two things people build first: speak text, and turn speech into text. Every recipe is a runnable file under [`examples/`](../examples) and needs no npm…">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="recipes.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html" class="active">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="node-js-recipes">Node.js recipes</h1>
+<p>Real-life examples for the two things people build first: speak text, and turn
+speech into text. Every recipe is a runnable file under <a href="../examples"><code>examples/</code></a>
+and needs no npm dependency. The only external tool is <code>ffmpeg</code> (with <code>ffplay</code>)
+for recording and playback.</p>
+<pre class="shell-block"><code><span class="sh-comment"># macOS / Linux</span>
+<span class="sh-cli">export</span> <span class="sh-cmd">PATIENDESK_API_KEY=&quot;pd_live_...&quot;</span>
+
+<span class="sh-comment"># Windows PowerShell</span>
+<span class="sh-cli">$env:PATIENDESK_API_KEY=&quot;pd_live_...&quot;</span>
+</code></pre>
+<p>Install ffmpeg if you do not have it:</p>
+<pre class="shell-block"><code><span class="sh-comment"># Windows</span>
+<span class="sh-cli">winget</span> <span class="sh-cmd">install</span> <span class="sh-arg">Gyan.FFmpeg</span>
+
+<span class="sh-comment"># macOS</span>
+<span class="sh-cli">brew</span> <span class="sh-cmd">install</span> <span class="sh-arg">ffmpeg</span>
+
+<span class="sh-comment"># Debian or Ubuntu</span>
+<span class="sh-cli">sudo</span> <span class="sh-cmd">apt</span> <span class="sh-arg">install</span> <span class="sh-arg">ffmpeg</span>
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Recipe</th>
+<th>File</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Speak and play</td>
+<td><code>examples/tts.mjs</code></td>
+<td>Alania to a file, then plays it. <code>--stream</code> plays while it downloads.</td>
+</tr>
+<tr>
+<td>Transcribe a file</td>
+<td><code>examples/stt-file.mjs</code></td>
+<td>Duyu over REST, with <code>verbose_json</code>, <code>srt</code> and <code>vtt</code>.</td>
+</tr>
+<tr>
+<td>Record then transcribe</td>
+<td><code>examples/stt-mic.mjs</code></td>
+<td>Records the microphone with ffmpeg, then transcribes it.</td>
+</tr>
+<tr>
+<td>Live microphone</td>
+<td><code>examples/stt-live.mjs</code></td>
+<td>Streams the microphone to Duyu over WebSocket.</td>
+</tr>
+</tbody></table>
+<h2 id="speak-text-and-hear-it">Speak text and hear it</h2>
+<p>The shortest path: one call, save the bytes, play the file.</p>
+<pre><code class="language-ts">import { writeFile } from &quot;node:fs/promises&quot;;
+import { execFile } from &quot;node:child_process&quot;;
+import { promisify } from &quot;node:util&quot;;
+import { PatientDesk } from &quot;patientdesk-sdk&quot;;
+
+const run = promisify(execFile);
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+async function speak(text: string) {
+  const speech = await pd.speech.create({ input: text, response_format: &quot;wav&quot; });
+  await writeFile(&quot;randevu.wav&quot;, new Uint8Array(await speech.arrayBuffer()));
+  // ffplay ships with ffmpeg and plays on every desktop OS.
+  await run(&quot;ffplay&quot;, [&quot;-autoexit&quot;, &quot;-nodisp&quot;, &quot;-loglevel&quot;, &quot;quiet&quot;, &quot;randevu.wav&quot;]);
+}
+
+await speak(&quot;Randevunuz yarın saat 14:05 için oluşturuldu.&quot;);
+</code></pre>
+<h3 id="low-latency-playback">Low latency playback</h3>
+<p>For a voice assistant you want audio to start before the whole file arrives.
+Ask for raw PCM and pipe it to <code>ffplay</code> as it streams.</p>
+<pre><code class="language-ts">import { spawn } from &quot;node:child_process&quot;;
+import { PatientDesk } from &quot;patientdesk-sdk&quot;;
+
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+async function speakStreaming(text: string) {
+  const response = await pd.speech.createRaw({ input: text, response_format: &quot;pcm&quot; });
+
+  const player = spawn(&quot;ffplay&quot;, [
+    &quot;-autoexit&quot;, &quot;-nodisp&quot;, &quot;-loglevel&quot;, &quot;quiet&quot;,
+    &quot;-f&quot;, &quot;s16le&quot;, &quot;-ar&quot;, &quot;24000&quot;, &quot;-ac&quot;, &quot;1&quot;, &quot;-i&quot;, &quot;-&quot;,
+  ]);
+  response.body.pipe(player.stdin);
+  await new Promise((resolve) =&gt; player.on(&quot;close&quot;, resolve));
+}
+
+await speakStreaming(&quot;Bir saniye, kaydınızı kontrol ediyorum.&quot;);
+</code></pre>
+<p><code>pcm</code> is uncompressed 16-bit mono, so the sample rate and channel count are
+fixed. <code>wav</code> is 24 kHz mono.</p>
+<p>Run it:</p>
+<pre class="shell-block"><code><span class="sh-cli">node</span> <span class="sh-cmd">examples/tts.mjs</span> <span class="sh-arg">&quot;Randevunuz</span> <span class="sh-arg">oluşturuldu.&quot;</span>
+<span class="sh-cli">node</span> <span class="sh-cmd">examples/tts.mjs</span> <span class="sh-arg">&quot;Merhaba&quot;</span> <span class="sh-flag">--stream</span>
+</code></pre>
+<h2 id="transcribe-a-file">Transcribe a file</h2>
+<p>Send the bytes and read the transcript. Duyu takes base64 JSON, the SDK encodes
+it for you.</p>
+<pre><code class="language-ts">import { readFile } from &quot;node:fs/promises&quot;;
+import { PatientDesk } from &quot;patientdesk-sdk&quot;;
+
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+const audio = await readFile(&quot;kayit.m4a&quot;);
+const { text, language, duration } = await pd.audio.transcribe({
+  audio: new Uint8Array(audio),
+  audio_format: &quot;m4a&quot;,
+  language: &quot;tr&quot;,
+});
+
+console.log(`${language} ${duration}s`);
+console.log(text);
+</code></pre>
+<p>For subtitles, ask for <code>srt</code> or <code>vtt</code> and write the string straight to a file.</p>
+<pre><code class="language-ts">const srt = await pd.audio.transcribe({
+  audio: new Uint8Array(await readFile(&quot;interview.mp3&quot;)),
+  response_format: &quot;srt&quot;,
+});
+await writeFile(&quot;interview.srt&quot;, srt);
+</code></pre>
+<p>Run it:</p>
+<pre class="shell-block"><code><span class="sh-cli">node</span> <span class="sh-cmd">examples/stt-file.mjs</span> <span class="sh-arg">kayit.m4a</span>
+<span class="sh-cli">node</span> <span class="sh-cmd">examples/stt-file.mjs</span> <span class="sh-arg">kayit.wav</span> <span class="sh-flag">--verbose</span>
+<span class="sh-cli">node</span> <span class="sh-cmd">examples/stt-file.mjs</span> <span class="sh-arg">interview.mp3</span> <span class="sh-flag">--format</span> <span class="sh-arg">srt</span> <span class="sh-arg">&gt;</span> <span class="sh-arg">interview.srt</span>
+</code></pre>
+<h2 id="record-from-the-microphone-then-transcribe">Record from the microphone, then transcribe</h2>
+<p>There is no bundled microphone API, but ffmpeg captures the default input on
+every platform. Record a WAV, then send it.</p>
+<pre><code class="language-ts">import { spawn } from &quot;node:child_process&quot;;
+import { readFile } from &quot;node:fs/promises&quot;;
+import { PatientDesk } from &quot;patientdesk-sdk&quot;;
+
+function record(seconds: number, out: string) {
+  // Windows needs a DirectShow device name. Use &quot;ffmpeg -f dshow -list_devices true -i dummy&quot;
+  // to find it, or see examples/audio.mjs which discovers it for you.
+  const input =
+    process.platform === &quot;darwin&quot;
+      ? [&quot;-f&quot;, &quot;avfoundation&quot;, &quot;-i&quot;, &quot;:0&quot;]
+      : process.platform === &quot;win32&quot;
+        ? [&quot;-f&quot;, &quot;dshow&quot;, &quot;-i&quot;, `audio=${process.env.MIC_DEVICE}`]
+        : [&quot;-f&quot;, &quot;alsa&quot;, &quot;-i&quot;, &quot;default&quot;];
+
+  return new Promise((resolve, reject) =&gt; {
+    const ff = spawn(&quot;ffmpeg&quot;, [
+      &quot;-hide_banner&quot;, &quot;-loglevel&quot;, &quot;error&quot;, &quot;-y&quot;,
+      ...input,
+      &quot;-t&quot;, String(seconds),
+      &quot;-ar&quot;, &quot;16000&quot;, &quot;-ac&quot;, &quot;1&quot;,
+      out,
+    ]);
+    ff.on(&quot;close&quot;, (code) =&gt; (code === 0 ? resolve(out) : reject(new Error(`ffmpeg ${code}`))));
+  });
+}
+
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+await record(5, &quot;mic.wav&quot;);
+const { text } = await pd.audio.transcribe({
+  audio: new Uint8Array(await readFile(&quot;mic.wav&quot;)),
+  audio_format: &quot;wav&quot;,
+  language: &quot;tr&quot;,
+});
+console.log(text);
+</code></pre>
+<p><code>examples/audio.mjs</code> wraps this, including device discovery on Windows.</p>
+<p>Run it:</p>
+<pre class="shell-block"><code><span class="sh-cli">node</span> <span class="sh-cmd">examples/stt-mic.mjs</span> <span class="sh-arg">5</span>
+<span class="sh-cli">node</span> <span class="sh-cmd">examples/stt-mic.mjs</span> <span class="sh-arg">5</span> <span class="sh-flag">--keep</span> <span class="sh-flag">--out</span> <span class="sh-arg">kayit.wav</span>
+</code></pre>
+<h2 id="live-microphone-over-websocket">Live microphone over WebSocket</h2>
+<p>For a live assistant, streaming is lower latency than record-then-send. It is
+undocumented and experimental, so read <a href="streaming.html">Streaming</a> first.</p>
+<pre><code class="language-ts">import { spawn } from &quot;node:child_process&quot;;
+import { PatientDesk } from &quot;patientdesk-sdk&quot;;
+
+const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
+
+const stream = pd.audio.transcribeStream({
+  final: (text) =&gt; console.log(&quot;final:&quot;, text),
+  error: (message) =&gt; console.error(message),
+});
+
+// 16 kHz mono signed 16-bit PCM, exactly what the endpoint expects.
+const ff = spawn(&quot;ffmpeg&quot;, [
+  &quot;-hide_banner&quot;, &quot;-loglevel&quot;, &quot;error&quot;,
+  &quot;-f&quot;, &quot;avfoundation&quot;, &quot;-i&quot;, &quot;:0&quot;,
+  &quot;-ar&quot;, &quot;16000&quot;, &quot;-ac&quot;, &quot;1&quot;, &quot;-f&quot;, &quot;s16le&quot;, &quot;-&quot;,
+]);
+ff.stdout.on(&quot;data&quot;, (chunk) =&gt; stream.sendAudio(new Uint8Array(chunk)));
+
+process.on(&quot;SIGINT&quot;, () =&gt; {
+  ff.kill(&quot;SIGKILL&quot;);
+  stream.stop();
+});
+await stream.closed;
+</code></pre>
+<p>Run it:</p>
+<pre class="shell-block"><code><span class="sh-cli">node</span> <span class="sh-cmd">examples/stt-live.mjs</span> <span class="sh-arg">10</span>
+</code></pre>
+<p>Node 22 and later ship a global <code>WebSocket</code>. On older versions pass one to the
+client: <code>new PatientDesk({ apiKey, WebSocket })</code>.</p>
+<h2 id="telling-us-from-patientdesk">Telling &quot;us&quot; from PatientDesk</h2>
+<p>If a valid file comes back as <code>undecodable_audio</code>, it is a service-side decode
+error and not your input. Check the service first, then retry.</p>
+<pre><code class="language-ts">import { fetchStatus, isOperational } from &quot;patientdesk-sdk&quot;;
+
+if (!isOperational(await fetchStatus())) {
+  console.warn(&quot;PatientDesk is degraded, try again later&quot;);
+}
+</code></pre>
+<p>See <a href="testing.html">Testing</a> for how the live suite attributes these faults, and
+<a href="troubleshooting.html">Troubleshooting</a> for the common messages.</p></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#speak-text-and-hear-it">Speak text and hear it</a></li>
+          <li><a href="#low-latency-playback">Low latency playback</a></li>
+          <li><a href="#transcribe-a-file">Transcribe a file</a></li>
+          <li><a href="#record-from-the-microphone-then-transcribe">Record from the microphone, then transcribe</a></li>
+          <li><a href="#live-microphone-over-websocket">Live microphone over WebSocket</a></li>
+          <li><a href="#telling-us-from-patientdesk">Telling &quot;us&quot; from PatientDesk</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

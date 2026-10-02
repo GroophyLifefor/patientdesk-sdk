@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Streaming · patientdesk-sdk docs</title>
+  <meta name="description" content="`transcribeStream()` speaks the WebSocket protocol that PatientDesk's own voice endpoint uses at `wss://voice.patientdesk.ai/v1/audio/stream`. It is **not** in PatientDesk's publi…">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/streaming.html">
+  <meta property="og:title" content="Streaming · patientdesk-sdk docs">
+  <meta property="og:description" content="`transcribeStream()` speaks the WebSocket protocol that PatientDesk's own voice endpoint uses at `wss://voice.patientdesk.ai/v1/audio/stream`. It is **not** in PatientDesk's publi…">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="streaming.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html" class="active">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="streaming">Streaming</h1>
+<p><code>transcribeStream()</code> speaks the WebSocket protocol that PatientDesk&#39;s own voice
+endpoint uses at <code>wss://voice.patientdesk.ai/v1/audio/stream</code>. It is <strong>not</strong> in
+PatientDesk&#39;s public documentation, so treat it as experimental. The protocol
+mirrors what the Ömer desktop assistant uses in production.</p>
+<p>This page describes behavior that can change without notice. For a supported
+path, use the REST endpoint in <a href="speech-to-text.html">Speech to text</a>.</p>
+<h2 id="a-known-endpoint-change">A known endpoint change</h2>
+<p>The endpoint once took the key as a <code>key</code> query parameter. It now expects a
+<code>token</code> query parameter. A <code>key</code> connection opens but never sends a <code>ready</code>
+frame, and any other parameter name gets <code>missing_api_key</code>. The SDK sends
+<code>token</code>. If a socket connects and then just sits there, check this first.</p>
+<p>Authentication is passed in the URL for a browser <code>WebSocket</code>, which cannot set
+headers. Treat the URL as a secret and do not log it.</p>
+<p>The handshake is also intermittently refused. A fresh socket sometimes closes
+with code <code>1006</code> before the <code>ready</code> frame, roughly one attempt in five in our
+observations. Retry the connection a few times before assuming a client bug. The
+<a href="testing.html">live suite</a> does exactly that.</p>
+<h2 id="opening-a-session">Opening a session</h2>
+<pre><code class="language-ts">const stream = pd.audio.transcribeStream(
+  {
+    ready: (info) =&gt; console.log(&quot;ready&quot;, info.model),
+    final: (text) =&gt; console.log(&quot;final:&quot;, text),
+    error: (message) =&gt; console.error(message),
+    close: (code, reason) =&gt; console.log(&quot;closed&quot;, code, reason),
+  },
+  { sampleRate: 16000, eagerFinal: true },
+);
+
+stream.sendAudio(pcmChunk); // raw 16-bit PCM, mono
+stream.stop();              // sends {type:&quot;stop&quot;} then closes
+await stream.closed;
+</code></pre>
+<h2 id="handshake">Handshake</h2>
+<p>The client opens the socket and sends a JSON <code>start</code> frame on <code>open</code>:</p>
+<pre><code class="language-json">{ &quot;type&quot;: &quot;start&quot;, &quot;sampleRate&quot;: 16000, &quot;eager_final&quot;: true }
+</code></pre>
+<p>After that it sends raw audio as <strong>binary</strong> frames. Use 16 kHz mono signed
+16-bit little-endian PCM. Extra fields can be merged into the <code>start</code> frame with
+<code>options.extra</code>.</p>
+<h2 id="events">Events</h2>
+<table>
+<thead>
+<tr>
+<th>Callback</th>
+<th>When</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ready</code></td>
+<td>Server handshake.</td>
+<td><code>{ model, raw }</code></td>
+</tr>
+<tr>
+<td><code>final</code></td>
+<td>Final transcript for an utterance.</td>
+<td><code>(text, raw)</code></td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>Server error frame, or a socket error.</td>
+<td><code>(message, raw)</code></td>
+</tr>
+<tr>
+<td><code>close</code></td>
+<td>Socket closed.</td>
+<td><code>(code, reason)</code></td>
+</tr>
+</tbody></table>
+<p>Server frames are JSON: <code>ready</code>, <code>final</code>, <code>error</code>.</p>
+<h2 id="the-returned-handle">The returned handle</h2>
+<table>
+<thead>
+<tr>
+<th>Member</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>sendAudio(chunk)</code></td>
+<td><code>(Uint8Array) =&gt; void</code></td>
+<td>No-op unless the socket is open.</td>
+</tr>
+<tr>
+<td><code>stop()</code></td>
+<td><code>() =&gt; void</code></td>
+<td>Sends <code>{type:&quot;stop&quot;}</code> then closes with code <code>1000</code>.</td>
+</tr>
+<tr>
+<td><code>closed</code></td>
+<td><code>Promise&lt;void&gt;</code></td>
+<td>Resolves when the socket closes.</td>
+</tr>
+</tbody></table>
+<p><code>stop()</code> tells the server the utterance ended so it can flush a final transcript
+before the socket closes.</p>
+<h2 id="requirements">Requirements</h2>
+<p>Streaming needs a <code>WebSocket</code> implementation. In Node 18 through 21 there is no
+global <code>WebSocket</code>, so inject one. From Node 22 the global exists.</p>
+<pre><code class="language-ts">import WebSocket from &quot;ws&quot;;
+import { PatientDesk } from &quot;patientdesk-sdk&quot;;
+
+const pd = new PatientDesk({ apiKey, WebSocket });
+</code></pre>
+<p>If no implementation is available, <code>transcribeStream()</code> throws a
+<code>PatientDeskError</code> with code <code>no_websocket</code> before opening anything.</p>
+<h2 id="full-example">Full example</h2>
+<pre><code class="language-ts">const stream = pd.audio.transcribeStream({
+  final: (text) =&gt; transcript.push(text),
+});
+
+// 160 ms of silence-trimmed 16 kHz mono PCM per frame
+for await (const frame of microphoneFrames()) {
+  stream.sendAudio(frame);
+}
+stream.stop();
+await stream.closed;
+console.log(transcript.join(&quot; &quot;));
+</code></pre>
+<h2 id="limits">Limits</h2>
+<p>The endpoint is undocumented, so there is no SLA. Expect the framing, the sample
+rate and the event names to be the moving parts if PatientDesk changes it. Pin a
+version and read <a href="testing.html">Testing</a> to see how the live suite covers it.</p></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#a-known-endpoint-change">A known endpoint change</a></li>
+          <li><a href="#opening-a-session">Opening a session</a></li>
+          <li><a href="#handshake">Handshake</a></li>
+          <li><a href="#events">Events</a></li>
+          <li><a href="#the-returned-handle">The returned handle</a></li>
+          <li><a href="#requirements">Requirements</a></li>
+          <li><a href="#full-example">Full example</a></li>
+          <li><a href="#limits">Limits</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

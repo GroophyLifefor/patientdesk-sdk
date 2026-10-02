@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Errors · patientdesk-sdk docs</title>
+  <meta name="description" content="Every non-2xx response, and every transport failure the client wraps, throws a `PatientDeskError`. It carries the parsed PatientDesk error shape plus the rate-limit fields, so you…">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/errors.html">
+  <meta property="og:title" content="Errors · patientdesk-sdk docs">
+  <meta property="og:description" content="Every non-2xx response, and every transport failure the client wraps, throws a `PatientDeskError`. It carries the parsed PatientDesk error shape plus the rate-limit fields, so you…">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="errors.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html" class="active">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="errors">Errors</h1>
+<p>Every non-2xx response, and every transport failure the client wraps, throws a
+<code>PatientDeskError</code>. It carries the parsed PatientDesk error shape plus the
+rate-limit fields, so you can schedule a retry from <code>resetsAt</code>.</p>
+<h2 id="catching">Catching</h2>
+<pre><code class="language-ts">import { PatientDeskError } from &quot;patientdesk-sdk&quot;;
+
+try {
+  await pd.speech.create({ input: &quot;x&quot; });
+} catch (err) {
+  if (err instanceof PatientDeskError) {
+    console.error(err.status, err.code, err.message);
+    if (err.isRateLimit) {
+      console.log(`quota (${err.scope}) resets at ${err.resetsAt}`);
+    }
+  }
+}
+</code></pre>
+<h2 id="fields">Fields</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>status</code></td>
+<td><code>number</code></td>
+<td>HTTP status. <code>0</code> for a transport or timeout failure.</td>
+</tr>
+<tr>
+<td><code>code</code></td>
+<td><code>string | undefined</code></td>
+<td>e.g. <code>rate_limit_error</code>, <code>model_retired</code>.</td>
+</tr>
+<tr>
+<td><code>body</code></td>
+<td><code>unknown</code></td>
+<td>Parsed error body, when it was JSON.</td>
+</tr>
+<tr>
+<td><code>reason</code></td>
+<td><code>string | undefined</code></td>
+<td><code>error.details.reason</code>.</td>
+</tr>
+<tr>
+<td><code>scope</code></td>
+<td><code>string | undefined</code></td>
+<td><code>user</code> or <code>pool</code>.</td>
+</tr>
+<tr>
+<td><code>retryAfterSeconds</code></td>
+<td><code>number | undefined</code></td>
+<td>From <code>Retry-After</code> or <code>details</code>.</td>
+</tr>
+<tr>
+<td><code>resetAt</code></td>
+<td><code>string | undefined</code></td>
+<td>ISO time from <code>error.details.resetAt</code>.</td>
+</tr>
+<tr>
+<td><code>isRateLimit</code></td>
+<td><code>boolean</code> (getter)</td>
+<td><code>true</code> when <code>status === 429</code>.</td>
+</tr>
+<tr>
+<td><code>resetsAt</code></td>
+<td><code>Date | null</code> (getter)</td>
+<td><code>resetAt</code>, or now plus <code>retryAfterSeconds</code>.</td>
+</tr>
+</tbody></table>
+<p><code>resetsAt</code> returns a <code>Date</code> when the server gave either a reset time or a retry
+delay, and <code>null</code> otherwise.</p>
+<h2 id="local-validation-errors">Local validation errors</h2>
+<p>These throw before any request and are not <code>PatientDeskError</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Error</th>
+<th>Cause</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>TypeError</code></td>
+<td>Empty <code>input</code>, missing <code>audio</code>, empty audio, wrong audio type.</td>
+</tr>
+<tr>
+<td><code>RangeError</code></td>
+<td><code>input</code> over 5,000 characters.</td>
+</tr>
+</tbody></table>
+<p>Client construction errors are <code>PatientDeskError</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Cause</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>missing_api_key</code></td>
+<td>No key passed and no env var set.</td>
+</tr>
+<tr>
+<td><code>no_fetch</code></td>
+<td>No global <code>fetch</code> and none injected.</td>
+</tr>
+<tr>
+<td><code>no_websocket</code></td>
+<td>Streaming without a <code>WebSocket</code> implementation.</td>
+</tr>
+<tr>
+<td><code>no_base64</code></td>
+<td>No <code>btoa</code> or <code>Buffer</code> for the STT payload.</td>
+</tr>
+</tbody></table>
+<h2 id="retries-and-backoff">Retries and backoff</h2>
+<p>The client retries automatically on <code>408</code>, <code>409</code>, <code>425</code>, <code>429</code>, <code>500</code>, <code>502</code>,
+<code>503</code>, <code>504</code>, and on network failures. Everything else <code>4xx</code> is returned at once.</p>
+<ul>
+<li>Default <code>maxRetries</code> is <code>2</code>, so up to 3 attempts.</li>
+<li>When a <code>Retry-After</code> header is present, the wait is capped at 30 seconds.</li>
+<li>Otherwise the delay grows exponentially, base <code>250 ms</code>, capped at <code>4 s</code>, with a
+small jitter.</li>
+</ul>
+<p>A timeout aborts the request after <code>timeout</code> milliseconds, <code>120000</code> by default.
+Set <code>timeout: 0</code> to disable it.</p>
+<pre><code class="language-ts">const pd = new PatientDesk({ apiKey, maxRetries: 0, timeout: 30_000 });
+</code></pre>
+<h2 id="mapping-the-message">Mapping the message</h2>
+<p>The message comes from <code>error.message</code> in the body, then falls back to
+<code>PatientDesk HTTP &lt;status&gt;</code>. The code comes from <code>error.code</code>.</p>
+<h2 id="reading-the-body-once">Reading the body once</h2>
+<p>The error is built from a clone of the response, so the original body is left
+untouched. The client never retries a non-retryable <code>4xx</code>.</p></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#catching">Catching</a></li>
+          <li><a href="#fields">Fields</a></li>
+          <li><a href="#local-validation-errors">Local validation errors</a></li>
+          <li><a href="#retries-and-backoff">Retries and backoff</a></li>
+          <li><a href="#mapping-the-message">Mapping the message</a></li>
+          <li><a href="#reading-the-body-once">Reading the body once</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

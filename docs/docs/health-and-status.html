@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Health and status · patientdesk-sdk docs</title>
+  <meta name="description" content="PatientDesk publishes a public Statuspage. The SDK ships a standalone helper for it that takes **no API key**, so a test run can check service health before touching the paid endp…">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/health-and-status.html">
+  <meta property="og:title" content="Health and status · patientdesk-sdk docs">
+  <meta property="og:description" content="PatientDesk publishes a public Statuspage. The SDK ships a standalone helper for it that takes **no API key**, so a test run can check service health before touching the paid endp…">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="health-and-status.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html" class="active">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="health-and-status">Health and status</h1>
+<p>PatientDesk publishes a public Statuspage. The SDK ships a standalone helper for
+it that takes <strong>no API key</strong>, so a test run can check service health before
+touching the paid endpoints.</p>
+<h2 id="endpoint">Endpoint</h2>
+<pre><code>GET https://status.patientdesk.ai/api/v2/status.json
+</code></pre>
+<h2 id="usage">Usage</h2>
+<pre><code class="language-ts">import { fetchStatus, isOperational, statusDescription } from &quot;patientdesk-sdk&quot;;
+
+const status = await fetchStatus();
+console.log(statusDescription(status)); // &quot;All Systems Operational&quot;
+if (!isOperational(status)) {
+  throw new Error(&quot;PatientDesk is degraded, skipping live checks&quot;);
+}
+</code></pre>
+<h2 id="functions">Functions</h2>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Returns</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>fetchStatus(options?)</code></td>
+<td><code>Promise&lt;StatusResponse&gt;</code></td>
+<td>Fetches and parses the summary.</td>
+</tr>
+<tr>
+<td><code>isOperational(status)</code></td>
+<td><code>boolean</code></td>
+<td><code>false</code> when the indicator is not <code>none</code>.</td>
+</tr>
+<tr>
+<td><code>statusDescription(status)</code></td>
+<td><code>string</code></td>
+<td>The human summary, or <code>&quot;unknown&quot;</code>.</td>
+</tr>
+</tbody></table>
+<p><code>isOperational</code> treats <code>minor</code>, <code>major</code>, <code>critical</code> and <code>maintenance</code> as
+degraded. Anything else, including a missing indicator, returns <code>false</code> only for
+a missing indicator.</p>
+<h2 id="options">Options</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>url</code></td>
+<td><code>string</code></td>
+<td>the endpoint above</td>
+<td>Override the status endpoint.</td>
+</tr>
+<tr>
+<td><code>fetch</code></td>
+<td><code>typeof fetch</code></td>
+<td>global <code>fetch</code></td>
+<td>Inject a fetch.</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td><code>number</code></td>
+<td><code>10000</code></td>
+<td>Milliseconds. <code>0</code> disables.</td>
+</tr>
+<tr>
+<td><code>signal</code></td>
+<td><code>AbortSignal</code></td>
+<td>unset</td>
+<td>Cancel the request.</td>
+</tr>
+<tr>
+<td><code>retries</code></td>
+<td><code>number</code></td>
+<td><code>1</code></td>
+<td>Retries on network errors and 5xx.</td>
+</tr>
+</tbody></table>
+<p>Unlike <code>PatientDesk.request</code>, this helper does not wrap failures in
+<code>PatientDeskError</code>. It throws the underlying error, which makes it easy to call
+from a preflight script.</p>
+<h2 id="response-shape">Response shape</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>status.indicator</code></td>
+<td><code>string</code></td>
+<td><code>none</code>, <code>minor</code>, <code>major</code>, <code>critical</code>, <code>maintenance</code>.</td>
+</tr>
+<tr>
+<td><code>status.description</code></td>
+<td><code>string</code></td>
+<td>e.g. <code>All Systems Operational</code>.</td>
+</tr>
+<tr>
+<td><code>page.name</code></td>
+<td><code>string</code></td>
+<td>The status page name.</td>
+</tr>
+<tr>
+<td><code>page.updated_at</code></td>
+<td><code>string</code></td>
+<td>ISO time of the last update.</td>
+</tr>
+</tbody></table>
+<p>The full body is preserved, so any extra field Statuspage adds is available.</p>
+<h2 id="using-it-as-a-preflight">Using it as a preflight</h2>
+<p><code>scripts/preflight.mjs</code> does exactly this: it requires <code>PATIENDESK_API_KEY</code>, calls
+<code>fetchStatus</code>, and stops the live suite with one message when the service is not
+fully operational. See <a href="testing.html">Testing</a>.</p></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#endpoint">Endpoint</a></li>
+          <li><a href="#usage">Usage</a></li>
+          <li><a href="#functions">Functions</a></li>
+          <li><a href="#options">Options</a></li>
+          <li><a href="#response-shape">Response shape</a></li>
+          <li><a href="#using-it-as-a-preflight">Using it as a preflight</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>
