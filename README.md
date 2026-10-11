@@ -260,11 +260,23 @@ and 16 kHz PCM, plus a deliberately truncated WAV.
 | `PATIENDESK_API_KEY` | all clients | also read from `PATIENDESK_KEY` |
 | `PATIENDESK_BASE_URL` | full-test | override the API base |
 
+## Migrating
+
+Upgrade guides live in the docs, one page per version:
+
+| From | Guide |
+| --- | --- |
+| 0.1.0 | [Upgrading to 0.2.0](https://groophylifefor.github.io/patientdesk-sdk/docs/0.2.0.html) |
+
+Each release adds `docs/md/<version>.md` and a nav entry in
+`scripts/build-docs.mjs`.
+
 ## Release flow
 
 Releases are automated from tags:
 
-1. Bump `version` in `package.json` and push to `main`.
+1. Bump `version` in `package.json`, add the migration guide
+   (`docs/md/<version>.md` plus its nav entry), and push to `main`.
 2. Push a matching tag: `git tag v0.2.0 && git push origin v0.2.0`.
 3. The `release` workflow verifies the tag matches `package.json`, publishes to
    npm with provenance, and creates a GitHub Release.
@@ -315,6 +327,10 @@ const metin = await pd.audio.transcribe({ audio: await ses.arrayBuffer(), audio_
   olayları, `stop()` artık açık cümleyi finalize edilmesini bekler
 - **Hesap uçları**: `pd.voices`, `pd.pronunciations`, `pd.styles`, `pd.models`,
   `pd.usage()`, `fetchAlaniaHealth()`
+
+### Sürüm yükseltme
+
+Her sürüm için migration rehberi: [0.1.0 → 0.2.0](https://groophylifefor.github.io/patientdesk-sdk/docs/0.2.0.html)
 
 ### Doküman takibi
 

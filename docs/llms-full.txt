@@ -1036,6 +1036,281 @@ not fully operational. See [Testing](testing.md).
 
 ---
 
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/0.2.0.md
+
+# Upgrading to 0.2.0
+
+This guide covers `patientdesk-sdk` `0.1.0` to `0.2.0`. The release is mostly
+additive: the SDK keeps its Alania-1 defaults, so existing code keeps working.
+The changes that can affect you are listed first, then the new features and the
+migration recipes.
+
+## At a glance
+
+- Drop-in for most code. The SDK still sends `model: "alania-v1"` and
+  `voice: "alania"` (24 kHz) unless you pass a model.
+- Speech to text now uploads multipart instead of base64 JSON (`audioBase64` is
+  still accepted and decoded locally).
+- `transcribeStream().stop()` waits for the server to finalize the open sentence
+  before closing, instead of closing immediately.
+- Streaming auth now uses `?key=` (`{ token }` remains available for session
+  tokens).
+- `429 quota_exceeded` is not retried anymore.
+- The audio limit is 100 MB (it was about 9 MB).
+- Alania-2, streaming helpers and the account endpoints are new.
+
+## Behaviour changes
+
+### Speech to text uploads multipart
+
+`0.1.0` sent the audio as base64 inside a JSON body. `0.2.0` follows the current
+public contract: `multipart/form-data` with a `file` part.
+
+```ts
+// Unchanged for callers. Both forms work:
+await pd.audio.transcribe({ audio: bytes, audio_format: "wav" });
+await pd.audio.transcribe({ audioBase64: base64, audio_format: "wav" });
+```
+
+No caller code change is needed. If you wrap `fetch` with a proxy, middleware or
+logger, be aware that the request body is now a `FormData` instance and the SDK
+no longer sets a `content-type` header for it (the runtime sets the boundary).
+`audioBase64` is decoded locally and uploaded as the same `file` part.
+
+The limit is now 100 MB and 2 hours per request (`MAX_AUDIO_BYTES` exports the
+new value). Longer audio is split server-side.
+
+### stop() waits for the final transcript
+
+`0.1.0` sent `{type:"stop"}` and closed the socket immediately, which could drop
+the final transcript of the open sentence. `0.2.0` sends the stop frame, waits
+for `final` plus `stopped`, and lets the server close. If the server never
+answers, the SDK force-closes after 5 seconds so callers cannot hang.
+
+```ts
+stream.stop();
+await stream.closed; // may take up to about 5 s when the server goes quiet
+```
+
+If you put your own timeout around `stream.closed`, keep it above 5 seconds.
+
+### WebSocket authentication uses key
+
+Both WebSocket sessions now authenticate with `?key=<apiKey>`, matching the
+current documentation. The previous `?token=` parameter still exists as an
+option for short-lived session tokens.
+
+```ts
+// API key (default)
+pd.audio.transcribeStream(events);
+
+// Session token
+pd.audio.transcribeStream(events, { token: "session.jwt" });
+```
+
+The URL carries a secret either way. Do not log it.
+
+### quota_exceeded is not retried
+
+`0.1.0` retried every `429` with backoff. `0.2.0` returns `429 quota_exceeded`
+immediately, because waiting does not clear a monthly quota. Other `429`
+responses are still retried and honour `Retry-After`.
+
+```ts
+try {
+  await pd.speech.create({ input: "x" });
+} catch (err) {
+  if (err.code === "quota_exceeded") {
+    // Back off until err.resetsAt instead of retrying in a loop.
+  }
+}
+```
+
+### Temperature ranges are per model
+
+| Model | Range | Default |
+| --- | --- | --- |
+| `alania-v1` | 0 to 2.0 | 0.30 |
+| `alania-v2` | 0.6 to 2.0 | 1.0 |
+
+`top_p` is an Alania-1 field. `alania-v2` ignores it. Sending an Alania-2 field
+with `model: "alania-v1"` is rejected with `unsupported_field` instead of being
+silently ignored, and `instructions` cannot be combined with `voice_description`
+or `style` (`conflicting_fields`).
+
+## Migrating to Alania-2
+
+Alania-2 is opt-in. Pass the model and a voice:
+
+```ts
+// 0.1.0 style, still valid
+await pd.speech.create({ input: "Merhaba" });
+
+// Alania-2, 48 kHz with the new voice set
+const speech = await pd.speech.create({
+  model: "alania-v2",
+  voice: "alania2-f1", // f1, m1, m2, f2
+  input: "Merhaba",
+});
+```
+
+If you pass `model: "alania-v2"` without `voice`, the SDK picks `alania2-f1`
+automatically. The free model `antalia-mini` picks `antalia-mini` and bills zero
+characters (`speech.characters` is 0).
+
+### Style instructions and designed voices
+
+```ts
+await pd.speech.create({
+  model: "alania-v2",
+  voice: "alania2-m1",
+  style: "support-warm", // support-warm | support-calm | sales-energetic | reception-smile
+  // or instructions: "speaking slowly and calmly"
+  input: "Size nasıl yardımcı olabilirim?",
+});
+
+// Design a new voice from a description, keep the seed to reproduce it
+await pd.speech.create({
+  model: "alania-v2",
+  voice_description: "A warm, middle-aged woman with a low voice",
+  seed: 4242,
+  input: "Merhaba, randevunuzu yarın saat on dörde aldım.",
+});
+```
+
+### Cloning voices
+
+Inline clone on every request, or save once and reuse the id:
+
+```ts
+const speech = await pd.speech.create({
+  model: "alania-v2",
+  input: "Bu ses, konuşanın izniyle kaydedildi.",
+  reference_audio: sampleBytes, // 3 to 30 s, at most 10 MB
+  consent: true,
+});
+
+const { id } = await pd.voices.save({ name: "Sesim", file: sampleBytes, consent: true });
+await pd.speech.create({ model: "alania-v2", voice: id, input: "Merhaba" });
+```
+
+### Pronunciation dictionary
+
+```ts
+// Per request
+await pd.speech.create({
+  input: "PatientDesk ile görüşün.",
+  pronunciations: { PatientDesk: "Peyşınt Desk" },
+});
+
+// Account-wide, applied to every request
+await pd.pronunciations.add({ term: "PatientDesk", say_as: "Peyşınt Desk" });
+```
+
+### Telephony output
+
+`mulaw` and `alaw` are new. They are headerless G.711 at 8 kHz by default.
+
+```ts
+const speech = await pd.speech.create({
+  model: "alania-v2",
+  input: "Görüşmeniz kayıt altına alınmaktadır.",
+  response_format: "mulaw",
+  sample_rate: 8000,
+});
+```
+
+The full format set is now `wav`, `mp3`, `opus`, `flac`, `aac`, `pcm`, `mulaw`
+and `alaw`. See [Text to speech](text-to-speech.md#output-formats).
+
+## Migrating to streaming
+
+### HTTP streaming
+
+`0.1.0` required reading `response.body` yourself and handling the streamed WAV
+header by hand. `speech.stream()` does both, including the byte carry when a
+network chunk splits a sample.
+
+```ts
+for await (const pcm of pd.speech.stream({
+  model: "alania-v2",
+  input: longText,
+  response_format: "pcm",
+})) {
+  player.write(pcm); // 48 kHz mono PCM16
+}
+```
+
+Only `wav`, `pcm`, `mulaw` and `alaw` stream. Compressed formats return 400.
+
+### WebSocket TTS
+
+Speak many sentences over one connection instead of one request per sentence:
+
+```ts
+const socket = pd.speech.socket(
+  {
+    speechStart: (info) => console.log(info.characters),
+    audio: (chunk) => player.write(chunk),
+    speechEnd: (info) => console.log(info.audioSeconds),
+  },
+  { model: "alania-v2", encoding: "mulaw", sampleRate: 8000 },
+);
+await socket.speak({ input: "Randevunuz oluşturuldu." });
+socket.stop();
+await socket.closed;
+```
+
+### Live speech to text
+
+The WebSocket stream is now documented and exposes the full event set:
+
+```ts
+const stream = pd.audio.transcribeStream(
+  {
+    partial: (draft) => showDraft(draft),
+    final: (text, raw) => showFinal(text, raw.start, raw.end, raw.audio_s),
+    stopped: (info) => console.log("billed", info.audioSeconds),
+  },
+  { sampleRate: 16000, eagerFinal: true, partials: true },
+);
+```
+
+See [Streaming](streaming.md) for the options and the whole event list.
+
+## New features in 0.2.0
+
+| Feature | API |
+| --- | --- |
+| Alania-2 and the free `antalia-mini` | `model`, per-model default voice |
+| Built-in voices and saved voices | `voice`, `pd.voices.list()` |
+| Style, instructions, voice design | `style`, `instructions`, `voice_description` |
+| Cloning | `reference_audio`, `consent`, `pd.voices.save()` |
+| Pronunciation dictionary | `pronunciations`, `pd.pronunciations` |
+| Guidance and sampling | `cfg`, `top_p`, `sample_rate`, `seed` |
+| Telephony formats | `mulaw`, `alaw` |
+| Billing and trace headers | `requestId`, `model`, `characters`, `audioSeconds`, `queueWaitMs` |
+| HTTP streaming | `pd.speech.stream()` |
+| WebSocket TTS | `pd.speech.socket()` |
+| Live STT events | `partial`, `vad`, `segmentStart`, `segmentEnd`, `stopped` |
+| Model catalog and styles | `pd.models.list()`, `pd.styles.list()` |
+| Account usage | `pd.usage()` |
+| API health | `fetchAlaniaHealth()` |
+
+## Verifying the upgrade
+
+```sh
+npm test           # offline: unit and contract tests
+npm run full-test  # live: needs PATIENDESK_API_KEY and an operational service
+```
+
+The live suite now also covers Alania-2 at 48 kHz, a ready style, the free
+`antalia-mini` billing zero characters, the TTS WebSocket, and the read-only
+catalog endpoints. If a request fails, check whether the message starts with
+`SDK FAULT` or `PATIENDESK API FAULT`. See [Testing](testing.md).
+
+---
+
 Source: https://groophylifefor.github.io/patientdesk-sdk/docs/testing.md
 
 # Testing

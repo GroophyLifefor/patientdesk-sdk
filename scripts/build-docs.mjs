@@ -57,6 +57,10 @@ const NAV = [
     ],
   },
   {
+    title: "Migration",
+    items: [{ slug: "0.2.0", label: "0.1.0 to 0.2.0" }],
+  },
+  {
     title: "Testing",
     items: [
       { slug: "testing", label: "Testing" },

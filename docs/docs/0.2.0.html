@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>0.1.0 to 0.2.0 · patientdesk-sdk docs</title>
+  <meta name="description" content="This guide covers `patientdesk-sdk` `0.1.0` to `0.2.0`. The release is mostly additive: the SDK keeps its Alania-1 defaults, so existing code keeps working. The changes that can a…">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/0.2.0.html">
+  <meta property="og:title" content="0.1.0 to 0.2.0 · patientdesk-sdk docs">
+  <meta property="og:description" content="This guide covers `patientdesk-sdk` `0.1.0` to `0.2.0`. The release is mostly additive: the SDK keeps its Alania-1 defaults, so existing code keeps working. The changes that can a…">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+  <script defer src="https://umami.ordu.dev/script.js" data-website-id="250bd07e-3f44-447c-9e94-b4b012366c75"></script>
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="0.2.0.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Migration</p>
+          <ul class="nav-list">
+          <li><a href="0.2.0.html" class="active">0.1.0 to 0.2.0</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="upgrading-to-0-2-0">Upgrading to 0.2.0</h1>
+<p>This guide covers <code>patientdesk-sdk</code> <code>0.1.0</code> to <code>0.2.0</code>. The release is mostly
+additive: the SDK keeps its Alania-1 defaults, so existing code keeps working.
+The changes that can affect you are listed first, then the new features and the
+migration recipes.</p>
+<h2 id="at-a-glance">At a glance</h2>
+<ul>
+<li>Drop-in for most code. The SDK still sends <code>model: &quot;alania-v1&quot;</code> and
+<code>voice: &quot;alania&quot;</code> (24 kHz) unless you pass a model.</li>
+<li>Speech to text now uploads multipart instead of base64 JSON (<code>audioBase64</code> is
+still accepted and decoded locally).</li>
+<li><code>transcribeStream().stop()</code> waits for the server to finalize the open sentence
+before closing, instead of closing immediately.</li>
+<li>Streaming auth now uses <code>?key=</code> (<code>{ token }</code> remains available for session
+tokens).</li>
+<li><code>429 quota_exceeded</code> is not retried anymore.</li>
+<li>The audio limit is 100 MB (it was about 9 MB).</li>
+<li>Alania-2, streaming helpers and the account endpoints are new.</li>
+</ul>
+<h2 id="behaviour-changes">Behaviour changes</h2>
+<h3 id="speech-to-text-uploads-multipart">Speech to text uploads multipart</h3>
+<p><code>0.1.0</code> sent the audio as base64 inside a JSON body. <code>0.2.0</code> follows the current
+public contract: <code>multipart/form-data</code> with a <code>file</code> part.</p>
+<pre><code class="language-ts">// Unchanged for callers. Both forms work:
+await pd.audio.transcribe({ audio: bytes, audio_format: &quot;wav&quot; });
+await pd.audio.transcribe({ audioBase64: base64, audio_format: &quot;wav&quot; });
+</code></pre>
+<p>No caller code change is needed. If you wrap <code>fetch</code> with a proxy, middleware or
+logger, be aware that the request body is now a <code>FormData</code> instance and the SDK
+no longer sets a <code>content-type</code> header for it (the runtime sets the boundary).
+<code>audioBase64</code> is decoded locally and uploaded as the same <code>file</code> part.</p>
+<p>The limit is now 100 MB and 2 hours per request (<code>MAX_AUDIO_BYTES</code> exports the
+new value). Longer audio is split server-side.</p>
+<h3 id="stop-waits-for-the-final-transcript">stop() waits for the final transcript</h3>
+<p><code>0.1.0</code> sent <code>{type:&quot;stop&quot;}</code> and closed the socket immediately, which could drop
+the final transcript of the open sentence. <code>0.2.0</code> sends the stop frame, waits
+for <code>final</code> plus <code>stopped</code>, and lets the server close. If the server never
+answers, the SDK force-closes after 5 seconds so callers cannot hang.</p>
+<pre><code class="language-ts">stream.stop();
+await stream.closed; // may take up to about 5 s when the server goes quiet
+</code></pre>
+<p>If you put your own timeout around <code>stream.closed</code>, keep it above 5 seconds.</p>
+<h3 id="websocket-authentication-uses-key">WebSocket authentication uses key</h3>
+<p>Both WebSocket sessions now authenticate with <code>?key=&lt;apiKey&gt;</code>, matching the
+current documentation. The previous <code>?token=</code> parameter still exists as an
+option for short-lived session tokens.</p>
+<pre><code class="language-ts">// API key (default)
+pd.audio.transcribeStream(events);
+
+// Session token
+pd.audio.transcribeStream(events, { token: &quot;session.jwt&quot; });
+</code></pre>
+<p>The URL carries a secret either way. Do not log it.</p>
+<h3 id="quota-exceeded-is-not-retried">quota_exceeded is not retried</h3>
+<p><code>0.1.0</code> retried every <code>429</code> with backoff. <code>0.2.0</code> returns <code>429 quota_exceeded</code>
+immediately, because waiting does not clear a monthly quota. Other <code>429</code>
+responses are still retried and honour <code>Retry-After</code>.</p>
+<pre><code class="language-ts">try {
+  await pd.speech.create({ input: &quot;x&quot; });
+} catch (err) {
+  if (err.code === &quot;quota_exceeded&quot;) {
+    // Back off until err.resetsAt instead of retrying in a loop.
+  }
+}
+</code></pre>
+<h3 id="temperature-ranges-are-per-model">Temperature ranges are per model</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Range</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>alania-v1</code></td>
+<td>0 to 2.0</td>
+<td>0.30</td>
+</tr>
+<tr>
+<td><code>alania-v2</code></td>
+<td>0.6 to 2.0</td>
+<td>1.0</td>
+</tr>
+</tbody></table>
+<p><code>top_p</code> is an Alania-1 field. <code>alania-v2</code> ignores it. Sending an Alania-2 field
+with <code>model: &quot;alania-v1&quot;</code> is rejected with <code>unsupported_field</code> instead of being
+silently ignored, and <code>instructions</code> cannot be combined with <code>voice_description</code>
+or <code>style</code> (<code>conflicting_fields</code>).</p>
+<h2 id="migrating-to-alania-2">Migrating to Alania-2</h2>
+<p>Alania-2 is opt-in. Pass the model and a voice:</p>
+<pre><code class="language-ts">// 0.1.0 style, still valid
+await pd.speech.create({ input: &quot;Merhaba&quot; });
+
+// Alania-2, 48 kHz with the new voice set
+const speech = await pd.speech.create({
+  model: &quot;alania-v2&quot;,
+  voice: &quot;alania2-f1&quot;, // f1, m1, m2, f2
+  input: &quot;Merhaba&quot;,
+});
+</code></pre>
+<p>If you pass <code>model: &quot;alania-v2&quot;</code> without <code>voice</code>, the SDK picks <code>alania2-f1</code>
+automatically. The free model <code>antalia-mini</code> picks <code>antalia-mini</code> and bills zero
+characters (<code>speech.characters</code> is 0).</p>
+<h3 id="style-instructions-and-designed-voices">Style instructions and designed voices</h3>
+<pre><code class="language-ts">await pd.speech.create({
+  model: &quot;alania-v2&quot;,
+  voice: &quot;alania2-m1&quot;,
+  style: &quot;support-warm&quot;, // support-warm | support-calm | sales-energetic | reception-smile
+  // or instructions: &quot;speaking slowly and calmly&quot;
+  input: &quot;Size nasıl yardımcı olabilirim?&quot;,
+});
+
+// Design a new voice from a description, keep the seed to reproduce it
+await pd.speech.create({
+  model: &quot;alania-v2&quot;,
+  voice_description: &quot;A warm, middle-aged woman with a low voice&quot;,
+  seed: 4242,
+  input: &quot;Merhaba, randevunuzu yarın saat on dörde aldım.&quot;,
+});
+</code></pre>
+<h3 id="cloning-voices">Cloning voices</h3>
+<p>Inline clone on every request, or save once and reuse the id:</p>
+<pre><code class="language-ts">const speech = await pd.speech.create({
+  model: &quot;alania-v2&quot;,
+  input: &quot;Bu ses, konuşanın izniyle kaydedildi.&quot;,
+  reference_audio: sampleBytes, // 3 to 30 s, at most 10 MB
+  consent: true,
+});
+
+const { id } = await pd.voices.save({ name: &quot;Sesim&quot;, file: sampleBytes, consent: true });
+await pd.speech.create({ model: &quot;alania-v2&quot;, voice: id, input: &quot;Merhaba&quot; });
+</code></pre>
+<h3 id="pronunciation-dictionary">Pronunciation dictionary</h3>
+<pre><code class="language-ts">// Per request
+await pd.speech.create({
+  input: &quot;PatientDesk ile görüşün.&quot;,
+  pronunciations: { PatientDesk: &quot;Peyşınt Desk&quot; },
+});
+
+// Account-wide, applied to every request
+await pd.pronunciations.add({ term: &quot;PatientDesk&quot;, say_as: &quot;Peyşınt Desk&quot; });
+</code></pre>
+<h3 id="telephony-output">Telephony output</h3>
+<p><code>mulaw</code> and <code>alaw</code> are new. They are headerless G.711 at 8 kHz by default.</p>
+<pre><code class="language-ts">const speech = await pd.speech.create({
+  model: &quot;alania-v2&quot;,
+  input: &quot;Görüşmeniz kayıt altına alınmaktadır.&quot;,
+  response_format: &quot;mulaw&quot;,
+  sample_rate: 8000,
+});
+</code></pre>
+<p>The full format set is now <code>wav</code>, <code>mp3</code>, <code>opus</code>, <code>flac</code>, <code>aac</code>, <code>pcm</code>, <code>mulaw</code>
+and <code>alaw</code>. See <a href="text-to-speech.html#output-formats">Text to speech</a>.</p>
+<h2 id="migrating-to-streaming">Migrating to streaming</h2>
+<h3 id="http-streaming">HTTP streaming</h3>
+<p><code>0.1.0</code> required reading <code>response.body</code> yourself and handling the streamed WAV
+header by hand. <code>speech.stream()</code> does both, including the byte carry when a
+network chunk splits a sample.</p>
+<pre><code class="language-ts">for await (const pcm of pd.speech.stream({
+  model: &quot;alania-v2&quot;,
+  input: longText,
+  response_format: &quot;pcm&quot;,
+})) {
+  player.write(pcm); // 48 kHz mono PCM16
+}
+</code></pre>
+<p>Only <code>wav</code>, <code>pcm</code>, <code>mulaw</code> and <code>alaw</code> stream. Compressed formats return 400.</p>
+<h3 id="websocket-tts">WebSocket TTS</h3>
+<p>Speak many sentences over one connection instead of one request per sentence:</p>
+<pre><code class="language-ts">const socket = pd.speech.socket(
+  {
+    speechStart: (info) =&gt; console.log(info.characters),
+    audio: (chunk) =&gt; player.write(chunk),
+    speechEnd: (info) =&gt; console.log(info.audioSeconds),
+  },
+  { model: &quot;alania-v2&quot;, encoding: &quot;mulaw&quot;, sampleRate: 8000 },
+);
+await socket.speak({ input: &quot;Randevunuz oluşturuldu.&quot; });
+socket.stop();
+await socket.closed;
+</code></pre>
+<h3 id="live-speech-to-text">Live speech to text</h3>
+<p>The WebSocket stream is now documented and exposes the full event set:</p>
+<pre><code class="language-ts">const stream = pd.audio.transcribeStream(
+  {
+    partial: (draft) =&gt; showDraft(draft),
+    final: (text, raw) =&gt; showFinal(text, raw.start, raw.end, raw.audio_s),
+    stopped: (info) =&gt; console.log(&quot;billed&quot;, info.audioSeconds),
+  },
+  { sampleRate: 16000, eagerFinal: true, partials: true },
+);
+</code></pre>
+<p>See <a href="streaming.html">Streaming</a> for the options and the whole event list.</p>
+<h2 id="new-features-in-0-2-0">New features in 0.2.0</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>API</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Alania-2 and the free <code>antalia-mini</code></td>
+<td><code>model</code>, per-model default voice</td>
+</tr>
+<tr>
+<td>Built-in voices and saved voices</td>
+<td><code>voice</code>, <code>pd.voices.list()</code></td>
+</tr>
+<tr>
+<td>Style, instructions, voice design</td>
+<td><code>style</code>, <code>instructions</code>, <code>voice_description</code></td>
+</tr>
+<tr>
+<td>Cloning</td>
+<td><code>reference_audio</code>, <code>consent</code>, <code>pd.voices.save()</code></td>
+</tr>
+<tr>
+<td>Pronunciation dictionary</td>
+<td><code>pronunciations</code>, <code>pd.pronunciations</code></td>
+</tr>
+<tr>
+<td>Guidance and sampling</td>
+<td><code>cfg</code>, <code>top_p</code>, <code>sample_rate</code>, <code>seed</code></td>
+</tr>
+<tr>
+<td>Telephony formats</td>
+<td><code>mulaw</code>, <code>alaw</code></td>
+</tr>
+<tr>
+<td>Billing and trace headers</td>
+<td><code>requestId</code>, <code>model</code>, <code>characters</code>, <code>audioSeconds</code>, <code>queueWaitMs</code></td>
+</tr>
+<tr>
+<td>HTTP streaming</td>
+<td><code>pd.speech.stream()</code></td>
+</tr>
+<tr>
+<td>WebSocket TTS</td>
+<td><code>pd.speech.socket()</code></td>
+</tr>
+<tr>
+<td>Live STT events</td>
+<td><code>partial</code>, <code>vad</code>, <code>segmentStart</code>, <code>segmentEnd</code>, <code>stopped</code></td>
+</tr>
+<tr>
+<td>Model catalog and styles</td>
+<td><code>pd.models.list()</code>, <code>pd.styles.list()</code></td>
+</tr>
+<tr>
+<td>Account usage</td>
+<td><code>pd.usage()</code></td>
+</tr>
+<tr>
+<td>API health</td>
+<td><code>fetchAlaniaHealth()</code></td>
+</tr>
+</tbody></table>
+<h2 id="verifying-the-upgrade">Verifying the upgrade</h2>
+<pre class="shell-block"><code><span class="sh-cli">npm</span> <span class="sh-cmd">test</span>           <span class="sh-comment"># offline: unit and contract tests</span>
+<span class="sh-cli">npm</span> <span class="sh-cmd">run</span> <span class="sh-arg">full-test</span>  <span class="sh-comment"># live: needs PATIENDESK_API_KEY and an operational service</span>
+</code></pre>
+<p>The live suite now also covers Alania-2 at 48 kHz, a ready style, the free
+<code>antalia-mini</code> billing zero characters, the TTS WebSocket, and the read-only
+catalog endpoints. If a request fails, check whether the message starts with
+<code>SDK FAULT</code> or <code>PATIENDESK API FAULT</code>. See <a href="testing.html">Testing</a>.</p></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#at-a-glance">At a glance</a></li>
+          <li><a href="#behaviour-changes">Behaviour changes</a></li>
+          <li><a href="#speech-to-text-uploads-multipart">Speech to text uploads multipart</a></li>
+          <li><a href="#stop-waits-for-the-final-transcript">stop() waits for the final transcript</a></li>
+          <li><a href="#websocket-authentication-uses-key">WebSocket authentication uses key</a></li>
+          <li><a href="#quota-exceeded-is-not-retried">quota_exceeded is not retried</a></li>
+          <li><a href="#temperature-ranges-are-per-model">Temperature ranges are per model</a></li>
+          <li><a href="#migrating-to-alania-2">Migrating to Alania-2</a></li>
+          <li><a href="#style-instructions-and-designed-voices">Style instructions and designed voices</a></li>
+          <li><a href="#cloning-voices">Cloning voices</a></li>
+          <li><a href="#pronunciation-dictionary">Pronunciation dictionary</a></li>
+          <li><a href="#telephony-output">Telephony output</a></li>
+          <li><a href="#migrating-to-streaming">Migrating to streaming</a></li>
+          <li><a href="#http-streaming">HTTP streaming</a></li>
+          <li><a href="#websocket-tts">WebSocket TTS</a></li>
+          <li><a href="#live-speech-to-text">Live speech to text</a></li>
+          <li><a href="#new-features-in-0-2-0">New features in 0.2.0</a></li>
+          <li><a href="#verifying-the-upgrade">Verifying the upgrade</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

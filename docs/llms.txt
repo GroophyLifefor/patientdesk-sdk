@@ -19,6 +19,10 @@
 - [Errors](https://groophylifefor.github.io/patientdesk-sdk/docs/errors.md)
 - [Health and status](https://groophylifefor.github.io/patientdesk-sdk/docs/health-and-status.md)
 
+## Migration
+
+- [0.1.0 to 0.2.0](https://groophylifefor.github.io/patientdesk-sdk/docs/0.2.0.md)
+
 ## Testing
 
 - [Testing](https://groophylifefor.github.io/patientdesk-sdk/docs/testing.md)
