@@ -4,8 +4,8 @@
 //   node scripts/fixtures.mjs
 //
 // Produces a Turkish speech WAV via Alania (if PATIENDESK_API_KEY is set),
-// then derives m4a/mp3/ogg/webm/flac variants and a truncated file with the
-// same WAV header, so STT format-detection and error paths can be tested offline.
+// then derives m4a/mp3/ogg/webm/flac variants and a truncated (still decodable)
+// clip for the partial-upload path, so STT format detection can be tested offline.
 
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";

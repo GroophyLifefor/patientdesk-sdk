@@ -44,8 +44,8 @@ These throw before any request and are not `PatientDeskError`:
 
 | Error | Cause |
 | --- | --- |
-| `TypeError` | Empty `input`, missing `audio`, empty audio, wrong audio type. |
-| `RangeError` | `input` over 5,000 characters. |
+| `TypeError` | Empty `input`, missing `audio`, empty audio, wrong audio type, empty `reference_audio`. |
+| `RangeError` | `input` over 5,000 characters, `reference_audio` over 10 MB, audio over 100 MB. |
 
 Client construction errors are `PatientDeskError`:
 
@@ -54,7 +54,7 @@ Client construction errors are `PatientDeskError`:
 | `missing_api_key` | No key passed and no env var set. |
 | `no_fetch` | No global `fetch` and none injected. |
 | `no_websocket` | Streaming without a `WebSocket` implementation. |
-| `no_base64` | No `btoa` or `Buffer` for the STT payload. |
+| `no_base64` | No `btoa`/`Buffer` (encode) or `atob`/`Buffer` (decode) available. |
 
 ## Retries and backoff
 
@@ -62,6 +62,8 @@ The client retries automatically on `408`, `409`, `425`, `429`, `500`, `502`,
 `503`, `504`, and on network failures. Everything else `4xx` is returned at once.
 
 - Default `maxRetries` is `2`, so up to 3 attempts.
+- `429 quota_exceeded` is **never** retried: waiting will not clear the monthly
+  quota. Back off until the quota resets instead.
 - When a `Retry-After` header is present, the wait is capped at 30 seconds.
 - Otherwise the delay grows exponentially, base `250 ms`, capped at `4 s`, with a
   small jitter.

@@ -24,8 +24,8 @@ const pd = new PatientDesk({
 | `apiKey` | `string` | `PATIENDESK_API_KEY`, then `PATIENDESK_KEY` | Required. Missing throws. |
 | `baseUrl` | `string` | `https://voice.patientdesk.ai/v1` | Trailing slashes are trimmed. |
 | `fetch` | `typeof fetch` | global `fetch` | Inject for tests or edge runtimes. |
-| `WebSocket` | `WebSocketConstructor` | global `WebSocket` | Needed only for streaming STT. |
-| `maxRetries` | `number` | `2` | Retries for 429, 5xx and network errors. |
+| `WebSocket` | `WebSocketConstructor` | global `WebSocket` | Needed for streaming STT and the TTS socket. |
+| `maxRetries` | `number` | `2` | Retries for 429, 5xx and network errors. `quota_exceeded` is never retried. |
 | `timeout` | `number` | `120000` | Per-request milliseconds. `0` disables. |
 | `defaultHeaders` | `Record<string, string>` | `{}` | Merged into every request. |
 
@@ -43,10 +43,12 @@ const pd = new PatientDesk({
 | Export | Value | Notes |
 | --- | --- | --- |
 | `DEFAULT_BASE_URL` | `https://voice.patientdesk.ai/v1` | |
+| `DEFAULT_ORIGIN` | `https://voice.patientdesk.ai` | Used by `fetchAlaniaHealth`. |
 | `DEFAULT_STATUS_URL` | `https://status.patientdesk.ai/api/v2/status.json` | |
 | `RETRYABLE_STATUS` | a `ReadonlySet<number>` | `408, 409, 425, 429, 500, 502, 503, 504`. |
 | `MAX_INPUT_CHARS` | `5000` | Alania input limit. |
-| `MAX_AUDIO_BYTES` | `9 * 1024 * 1024` | Duyu audio limit. |
+| `MAX_REFERENCE_BYTES` | `10 * 1024 * 1024` | Voice-clone sample limit. |
+| `MAX_AUDIO_BYTES` | `100 * 1024 * 1024` | Duyu audio limit per request. |
 | `CONTENT_TYPE` | a format to MIME map | Used by `SpeechResponse.contentType`. |
 
 ## Custom `fetch`
@@ -66,7 +68,8 @@ const pd = new PatientDesk({
 
 ## Custom `WebSocket`
 
-Node 20 and 21 have no global `WebSocket`. Inject one for streaming.
+Node 20 and 21 have no global `WebSocket`. Inject one for `transcribeStream()`
+and `speech.socket()`.
 
 ```ts
 import WebSocket from "ws";

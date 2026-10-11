@@ -71,14 +71,25 @@
         <article class="markdown prose"><h1 id="text-to-speech">Text to speech</h1>
 <p>Alania is PatientDesk&#39;s text-to-speech model. One endpoint, <code>POST /audio/speech</code>,
 takes JSON and returns the audio itself as the response body.</p>
+<blockquote>
+<p><strong>Default model:</strong> PatientDesk&#39;s API now defaults to <code>alania-v2</code> (48 kHz). This
+SDK keeps sending <code>alania-v1</code> + <code>alania</code> (24 kHz) unless you pass a model, so
+existing code does not change. Pass <code>model: &quot;alania-v2&quot;</code> for the current model.</p>
+</blockquote>
 <h2 id="basic-call">Basic call</h2>
 <pre><code class="language-ts">const speech = await pd.speech.create({
+  model: &quot;alania-v2&quot;,
+  voice: &quot;alania2-f1&quot;,
   input: &quot;Yarın saat 14:05 için randevunuz var.&quot;,
   response_format: &quot;mp3&quot;,
 });
 
-speech.contentType; // &quot;audio/mpeg&quot;
-speech.disclosure;  // &quot;ai-generated&quot; (from the X-Disclosure header)
+speech.contentType;   // &quot;audio/mpeg&quot;
+speech.disclosure;    // &quot;ai-generated&quot; (x-disclosure)
+speech.model;         // &quot;alania-v2&quot; (x-model)
+speech.characters;    // billed characters (x-characters; 0 for antalia-mini)
+speech.audioSeconds;  // x-audio-seconds (absent while streaming)
+speech.queueWaitMs;   // x-queue-wait-ms
 </code></pre>
 <p><code>create()</code> returns a <code>SpeechResponse</code>, a thin view over the one response body.</p>
 <table>
@@ -102,7 +113,37 @@ speech.disclosure;  // &quot;ai-generated&quot; (from the X-Disclosure header)
 <tr>
 <td><code>disclosure</code></td>
 <td><code>string | null</code></td>
-<td><code>X-Disclosure</code>, normally <code>ai-generated</code>.</td>
+<td><code>x-disclosure</code>, normally <code>ai-generated</code>.</td>
+</tr>
+<tr>
+<td><code>requestId</code></td>
+<td><code>string | null</code></td>
+<td><code>x-request-id</code>; share it in support requests.</td>
+</tr>
+<tr>
+<td><code>model</code></td>
+<td><code>string | null</code></td>
+<td><code>x-model</code>.</td>
+</tr>
+<tr>
+<td><code>characters</code></td>
+<td><code>number | null</code></td>
+<td>Billed characters.</td>
+</tr>
+<tr>
+<td><code>audioSeconds</code></td>
+<td><code>number | null</code></td>
+<td>Duration of the generated audio.</td>
+</tr>
+<tr>
+<td><code>queueWaitMs</code></td>
+<td><code>number | null</code></td>
+<td>Time spent waiting for a generation slot.</td>
+</tr>
+<tr>
+<td><code>sampleRate</code></td>
+<td><code>number | null</code></td>
+<td>Parsed from <code>Content-Type</code> (<code>rate=</code>), when present.</td>
 </tr>
 <tr>
 <td><code>arrayBuffer()</code></td>
@@ -121,13 +162,13 @@ speech.disclosure;  // &quot;ai-generated&quot; (from the X-Disclosure header)
 </tr>
 </tbody></table>
 <p>Read the body <strong>once</strong>. Pick one of <code>arrayBuffer</code>, <code>blob</code> or <code>stream</code>.</p>
-<h2 id="parameters">Parameters</h2>
+<h2 id="common-parameters">Common parameters</h2>
 <table>
 <thead>
 <tr>
 <th>Field</th>
 <th>Type</th>
-<th>Default</th>
+<th>SDK default</th>
 <th>Notes</th>
 </tr>
 </thead>
@@ -141,31 +182,43 @@ speech.disclosure;  // &quot;ai-generated&quot; (from the X-Disclosure header)
 <td><code>model</code></td>
 <td><code>string</code></td>
 <td><code>&quot;alania-v1&quot;</code></td>
-<td>Aggregators may use a namespaced id.</td>
+<td><code>alania-v2</code>, <code>alania-v1</code>, <code>antalia-mini</code> (free). The API&#39;s own default is <code>alania-v2</code>.</td>
 </tr>
 <tr>
 <td><code>voice</code></td>
 <td><code>string</code></td>
-<td><code>&quot;alania&quot;</code></td>
-<td>The single built-in voice.</td>
+<td>model&#39;s voice</td>
+<td>Defaults: <code>alania</code> (v1), <code>alania2-f1</code> (v2), <code>antalia-mini</code>. Saved voice ids work too.</td>
 </tr>
 <tr>
 <td><code>response_format</code></td>
 <td><code>TtsFormat</code></td>
 <td><code>&quot;wav&quot;</code></td>
-<td><code>wav</code>, <code>mp3</code>, <code>opus</code>, <code>flac</code>, <code>aac</code>, <code>pcm</code>.</td>
+<td><code>wav</code>, <code>mp3</code>, <code>opus</code>, <code>flac</code>, <code>aac</code>, <code>pcm</code>, <code>mulaw</code>, <code>alaw</code>.</td>
+</tr>
+<tr>
+<td><code>sample_rate</code></td>
+<td><code>number</code></td>
+<td>model&#39;s rate</td>
+<td><code>8000</code>, <code>16000</code>, <code>22050</code>, <code>24000</code>, <code>44100</code>, <code>48000</code> (capped at the model). G.711 defaults to 8000.</td>
 </tr>
 <tr>
 <td><code>temperature</code></td>
 <td><code>number</code></td>
-<td>server side <code>0.30</code></td>
-<td><code>0..1</code>, higher is less consistent.</td>
+<td>server side</td>
+<td>v1: 0–2.0 (default 0.30) · v2: 0.6–2.0 (default 1.0).</td>
 </tr>
 <tr>
 <td><code>seed</code></td>
 <td><code>number</code></td>
 <td>unset</td>
-<td>Same text and seed are not byte-identical.</td>
+<td>Same text + seed + settings reproduce the same audio.</td>
+</tr>
+<tr>
+<td><code>stream</code></td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Stream the audio as it is generated; see <a href="streaming.html">Streaming</a>.</td>
 </tr>
 <tr>
 <td><code>extra</code></td>
@@ -174,58 +227,126 @@ speech.disclosure;  // &quot;ai-generated&quot; (from the X-Disclosure header)
 <td>Merged into the body for forward compatibility.</td>
 </tr>
 </tbody></table>
-<p><code>wav</code> output is 24 kHz, mono, 16-bit.</p>
+<h2 id="alania-2-fields">Alania-2 fields</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>style</code></td>
+<td><code>string</code></td>
+<td>Ready style id: <code>support-warm</code>, <code>support-calm</code>, <code>sales-energetic</code>, <code>reception-smile</code> (<code>pd.styles.list()</code>). Cannot combine with <code>instructions</code>/<code>voice_description</code>.</td>
+</tr>
+<tr>
+<td><code>instructions</code></td>
+<td><code>string</code></td>
+<td>How to speak, ≤200 characters, no parentheses. Non-English is translated.</td>
+</tr>
+<tr>
+<td><code>voice_description</code></td>
+<td><code>string</code></td>
+<td>Design a new voice from a description, ≤200 characters. Combine with <code>seed</code> to reproduce it.</td>
+</tr>
+<tr>
+<td><code>reference_audio</code></td>
+<td><code>Uint8Array | ArrayBuffer | Blob | string</code></td>
+<td>Clone from a 3–30 s sample (≤10 MB); bytes or base64/data URI.</td>
+</tr>
+<tr>
+<td><code>reference_text</code></td>
+<td><code>string</code></td>
+<td>Transcript of the sample (≤1,000 chars). Accepted, not used.</td>
+</tr>
+<tr>
+<td><code>consent</code></td>
+<td><code>boolean</code></td>
+<td>Required with <code>reference_audio</code>: declares the speaker consented.</td>
+</tr>
+<tr>
+<td><code>pronunciations</code></td>
+<td><code>object | array</code></td>
+<td>Per-request overrides, e.g. <code>{ PatientDesk: &quot;Peyşınt Desk&quot; }</code> (≤200). Beats the saved dictionary.</td>
+</tr>
+<tr>
+<td><code>cfg</code></td>
+<td><code>number</code></td>
+<td>1.0–5.0 guidance strength (default 2.0, design 3.0).</td>
+</tr>
+<tr>
+<td><code>top_p</code></td>
+<td><code>number</code></td>
+<td>alania-v1 only (0.01–1.0, default 0.9); alania-v2 ignores it.</td>
+</tr>
+</tbody></table>
+<p>Sending an Alania-2 field with <code>model: &quot;alania-v1&quot;</code> is rejected with
+<code>unsupported_field</code>, not silently ignored. Likewise <code>instructions</code> +
+<code>voice_description</code> (or <code>style</code>) is rejected with <code>conflicting_fields</code>.</p>
 <h2 id="output-formats">Output formats</h2>
 <table>
 <thead>
 <tr>
 <th><code>response_format</code></th>
 <th><code>contentType</code></th>
+<th>Notes</th>
 </tr>
 </thead>
 <tbody><tr>
 <td><code>wav</code></td>
 <td><code>audio/wav</code></td>
-</tr>
-<tr>
-<td><code>mp3</code></td>
-<td><code>audio/mpeg</code></td>
-</tr>
-<tr>
-<td><code>opus</code></td>
-<td><code>audio/ogg</code></td>
-</tr>
-<tr>
-<td><code>flac</code></td>
-<td><code>audio/flac</code></td>
-</tr>
-<tr>
-<td><code>aac</code></td>
-<td><code>audio/aac</code></td>
+<td>16-bit mono; 48 kHz (v2) or 24 kHz (v1).</td>
 </tr>
 <tr>
 <td><code>pcm</code></td>
 <td><code>audio/L16</code></td>
+<td>Headerless; the rate is in <code>Content-Type</code> (<code>audio/L16; rate=48000</code>).</td>
+</tr>
+<tr>
+<td><code>mulaw</code></td>
+<td><code>audio/PCMU</code></td>
+<td>Headerless G.711, one byte per sample, 8 kHz by default.</td>
+</tr>
+<tr>
+<td><code>alaw</code></td>
+<td><code>audio/PCMA</code></td>
+<td>Same, A-law.</td>
+</tr>
+<tr>
+<td><code>mp3</code></td>
+<td><code>audio/mpeg</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>opus</code></td>
+<td><code>audio/ogg</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>flac</code></td>
+<td><code>audio/flac</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>aac</code></td>
+<td><code>audio/aac</code></td>
+<td></td>
 </tr>
 </tbody></table>
 <p>When the server sends a <code>Content-Type</code>, it wins over the table.</p>
-<h2 id="low-latency-streaming">Low-latency streaming</h2>
-<p><code>createRaw()</code> skips the wrapper and returns the raw <code>Response</code>, so you can pipe
-<code>response.body</code> to a player without buffering the whole file.</p>
-<pre><code class="language-ts">const response = await pd.speech.createRaw({
-  input: &quot;Randevunuz oluşturuldu.&quot;,
-  response_format: &quot;pcm&quot;,
-});
-
-const reader = response.body!.getReader();
-for (;;) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  player.write(value);
+<h2 id="streaming">Streaming</h2>
+<pre><code class="language-ts">// Yields PCM as it is generated. Strips the streamed WAV header and carries a
+// sample split across network chunks.
+for await (const pcm of pd.speech.stream({ model: &quot;alania-v2&quot;, input: longText })) {
+  player.write(pcm); // 48 kHz mono PCM16 (24 kHz for alania-v1)
 }
 </code></pre>
-<p>Note: the native API ignores the deprecated <code>stream</code> field and returns the audio
-in one piece. Stream the returned body yourself, as above.</p>
+<p><code>createRaw()</code> skips the wrapper: pass <code>stream: true</code> and read <code>response.body</code>
+yourself. Only <code>wav</code>, <code>pcm</code>, <code>mulaw</code> and <code>alaw</code> stream. Compressed formats
+return 400. For many sentences over one connection, use the WebSocket session,
+see <a href="streaming.html">Streaming</a>.</p>
 <h2 id="splitting-long-text">Splitting long text</h2>
 <p>Alania accepts at most 5,000 characters. Split on sentence boundaries and join
 the resulting files with <code>ffmpeg</code> if you need a single recording.</p>
@@ -235,10 +356,16 @@ for (const [i, chunk] of chunks.entries()) {
   await Deno.writeFile(`part-${i}.mp3`, new Uint8Array(await speech.arrayBuffer()));
 }
 </code></pre>
+<h2 id="saving-voices">Saving voices</h2>
+<p>A clone or a design can be saved once and then used by id:</p>
+<pre><code class="language-ts">await pd.voices.save({ name: &quot;Sesim&quot;, file: sampleBytes, consent: true });
+await pd.voices.save({ name: &quot;Danışman&quot;, voice_description, seed: 4242, input: designText });
+await pd.speech.create({ model: &quot;alania-v2&quot;, voice: savedId, input: &quot;Merhaba&quot; });
+</code></pre>
 <h2 id="errors">Errors</h2>
 <p>Invalid local input throws before any request: <code>TypeError</code> for an empty <code>input</code>,
-<code>RangeError</code> for text over 5,000 characters. Request failures throw
-<code>PatientDeskError</code>. See <a href="errors.html">Errors</a>.</p></article>
+<code>RangeError</code> for text over 5,000 characters or a <code>reference_audio</code> over 10 MB.
+Request failures throw <code>PatientDeskError</code>. See <a href="errors.html">Errors</a>.</p></article>
         <footer class="doc-footer">
           <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
         </footer>
@@ -247,10 +374,12 @@ for (const [i, chunk] of chunks.entries()) {
           <p class="toc-title">On this page</p>
           <ul>
           <li><a href="#basic-call">Basic call</a></li>
-          <li><a href="#parameters">Parameters</a></li>
+          <li><a href="#common-parameters">Common parameters</a></li>
+          <li><a href="#alania-2-fields">Alania-2 fields</a></li>
           <li><a href="#output-formats">Output formats</a></li>
-          <li><a href="#low-latency-streaming">Low-latency streaming</a></li>
+          <li><a href="#streaming">Streaming</a></li>
           <li><a href="#splitting-long-text">Splitting long text</a></li>
+          <li><a href="#saving-voices">Saving voices</a></li>
           <li><a href="#errors">Errors</a></li>
           </ul>
         </nav>

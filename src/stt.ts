@@ -1,7 +1,8 @@
-import type { HttpCore, WebSocketLike } from "./client.js";
+import type { HttpCore } from "./client.js";
 import { PatientDeskError } from "./errors.js";
+import { bytesToBlob, fromBase64, toBase64, toUint8Array } from "./bytes.js";
 import type {
-  AudioInput,
+  SttFormat,
   SttStream,
   SttStreamEvents,
   SttStreamStartOptions,
@@ -14,11 +15,23 @@ import type {
 } from "./types.js";
 
 export const DEFAULT_STT_MODEL = "duyu-1";
-export const MAX_AUDIO_BYTES = 9 * 1024 * 1024; // ~9 MB per the docs
+/** The docs allow 100 MB / 2 hours per transcription. */
+export const MAX_AUDIO_BYTES = 100 * 1024 * 1024;
+
+const AUDIO_META: Record<SttFormat, { ext: string; type: string }> = {
+  wav: { ext: "wav", type: "audio/wav" },
+  mp3: { ext: "mp3", type: "audio/mpeg" },
+  m4a: { ext: "m4a", type: "audio/mp4" },
+  webm: { ext: "webm", type: "audio/webm" },
+  ogg: { ext: "ogg", type: "audio/ogg" },
+  flac: { ext: "flac", type: "audio/flac" },
+};
+
+const STOP_TIMEOUT_MS = 5_000;
+const WS_OPEN = 1;
 
 /**
- * Duyu speech-to-text: a base64 JSON REST call plus an undocumented WebSocket
- * streaming client.
+ * Duyu speech-to-text: a multipart REST call plus a WebSocket streaming client.
  *
  * ```ts
  * const { text } = await pd.audio.transcribe({ audio: bytes, audio_format: "m4a" });
@@ -37,26 +50,28 @@ export class AudioApi {
     params: TranscribeParams | TranscribeParamsPlain | TranscribeParamsVerbose,
   ): Promise<Transcription | string> {
     const format = params.response_format ?? "json";
-    const audioBase64 = await resolveAudioBase64(params);
+    const { bytes, filename, type } = await resolveAudio(params);
 
-    const body: Record<string, unknown> = {
-      model: params.model ?? DEFAULT_STT_MODEL,
-      audio_base64: audioBase64,
-      ...(params.audio_format !== undefined ? { audio_format: params.audio_format } : {}),
-      ...(params.language !== undefined ? { language: params.language } : {}),
-      ...(params.prompt !== undefined ? { prompt: params.prompt } : {}),
-      ...(params.response_format !== undefined ? { response_format: params.response_format } : {}),
-      ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
-      ...(format === "verbose_json" && (params as TranscribeParamsVerbose).timestamp_granularities
-        ? { timestamp_granularities: (params as TranscribeParamsVerbose).timestamp_granularities }
-        : {}),
-      ...params.extra,
-    };
+    const form = new FormData();
+    form.append("file", bytesToBlob(bytes, type), filename);
+    form.append("model", params.model ?? DEFAULT_STT_MODEL);
+    if (params.language !== undefined) form.append("language", params.language);
+    if (params.prompt !== undefined) form.append("prompt", params.prompt);
+    if (params.response_format !== undefined) form.append("response_format", params.response_format);
+    if (params.temperature !== undefined) form.append("temperature", String(params.temperature));
+    if (format === "verbose_json") {
+      for (const granularity of (params as TranscribeParamsVerbose).timestamp_granularities ?? []) {
+        form.append("timestamp_granularities[]", granularity);
+      }
+    }
+    for (const [key, value] of Object.entries(params.extra ?? {})) {
+      form.append(key, typeof value === "string" ? value : JSON.stringify(value));
+    }
 
     const response = await this.core.request("/audio/transcriptions", {
       method: "POST",
-      headers: this.core.headers(),
-      body: JSON.stringify(body),
+      headers: this.core.authHeaders(),
+      body: form,
     });
 
     if (format === "text" || format === "srt" || format === "vtt") {
@@ -66,18 +81,20 @@ export class AudioApi {
   }
 
   /**
-   * Live transcription over WebSocket. **Undocumented**: PatientDesk's public
-   * docs describe Duyu only as the REST endpoint above. This mirrors the
-   * protocol the Ömer desktop assistant uses in production
-   * (`wss://voice.patientdesk.ai/v1/audio/stream`): send a `start` frame, then
-   * raw PCM as binary frames, and read `ready` / `final` / `error` events.
+   * Live transcription over WebSocket (`wss://…/v1/audio/stream`): send a
+   * `start` frame, then raw PCM as binary frames. The server emits `ready`,
+   * `vad`, `segment_start`, `partial`, `segment_end`, `final`, `stopped` and
+   * `error`. Auth is `?key=` by default; pass `options.token` for a session
+   * token instead.
    *
    * ```ts
    * const stream = pd.audio.transcribeStream({
-   *   sampleRate: 16000,
-   *   onFinal: (text) => console.log(text),
+   *   partial: (draft) => console.log("…", draft),
+   *   final: (text) => console.log(text),
    * });
    * stream.sendAudio(pcmChunk);
+   * stream.stop(); // the open sentence is finalized before the close
+   * await stream.closed;
    * ```
    */
   transcribeStream(events: SttStreamEvents = {}, options: SttStreamStartOptions = {}): SttStream {
@@ -89,14 +106,14 @@ export class AudioApi {
       );
     }
 
-    // The endpoint wants the key in a `token` query parameter. `key` connects
-    // but never sends a ready frame, and the server replies with
-    // `missing_api_key` when neither is understood.
-    const url = `${this.core.wsOrigin}/v1/audio/stream?token=${encodeURIComponent(this.core.apiKey)}`;
-    const socket = new WS(url);
+    const auth = options.token
+      ? `token=${encodeURIComponent(options.token)}`
+      : `key=${encodeURIComponent(this.core.apiKey)}`;
+    const socket = new WS(`${this.core.wsOrigin}/v1/audio/stream?${auth}`);
     socket.binaryType = "arraybuffer";
 
     let settled = false;
+    let stopTimer: ReturnType<typeof setTimeout> | undefined;
     let resolveClosed!: () => void;
     const closed = new Promise<void>((resolve) => {
       resolveClosed = resolve;
@@ -104,6 +121,7 @@ export class AudioApi {
     const finish = () => {
       if (settled) return;
       settled = true;
+      if (stopTimer) clearTimeout(stopTimer);
       resolveClosed();
     };
 
@@ -113,21 +131,59 @@ export class AudioApi {
           type: "start",
           sampleRate: options.sampleRate ?? 16000,
           eager_final: options.eagerFinal ?? true,
+          ...(options.partials !== undefined ? { partials: options.partials } : {}),
+          ...(options.partialMs !== undefined ? { partial_ms: options.partialMs } : {}),
           ...options.extra,
         }),
       );
     };
 
     socket.onmessage = (event) => {
-      let message: { type?: string; text?: string; model?: string; message?: string };
+      let message: {
+        type?: string;
+        text?: string;
+        model?: string;
+        message?: string;
+        quota?: unknown;
+        prob?: number;
+        active?: boolean;
+        start?: number;
+        end?: number;
+        audio_s?: number;
+        infer_ms?: number;
+        rtf?: number;
+      };
       try {
         message = JSON.parse(String(event.data));
       } catch {
         return;
       }
-      if (message.type === "ready") events.ready?.({ model: message.model, raw: message });
-      else if (message.type === "final") events.final?.(String(message.text ?? ""), message);
-      else if (message.type === "error") events.error?.(String(message.message ?? "unknown error"), message);
+      switch (message.type) {
+        case "ready":
+          events.ready?.({ model: message.model, quota: message.quota, raw: message });
+          break;
+        case "vad":
+          events.vad?.({ prob: message.prob, active: message.active, raw: message });
+          break;
+        case "segment_start":
+          events.segmentStart?.({ start: message.start, raw: message });
+          break;
+        case "partial":
+          events.partial?.(String(message.text ?? ""), message);
+          break;
+        case "segment_end":
+          events.segmentEnd?.({ end: message.end, raw: message });
+          break;
+        case "final":
+          events.final?.(String(message.text ?? ""), message);
+          break;
+        case "stopped":
+          events.stopped?.({ audioSeconds: message.audio_s, raw: message });
+          break;
+        case "error":
+          events.error?.(String(message.message ?? "unknown error"), message);
+          break;
+      }
     };
 
     socket.onerror = () => {
@@ -141,64 +197,53 @@ export class AudioApi {
 
     return {
       sendAudio(chunk: Uint8Array) {
-        if (socket.readyState === 1) socket.send(chunk);
+        if (socket.readyState === WS_OPEN) socket.send(chunk);
       },
       stop() {
-        // Tell the server the utterance ended so it can emit a final; then close.
+        // Tell the server the utterance ended: it finalizes the open sentence
+        // (`final` + `stopped`) and then closes. Force the close if that never
+        // arrives so callers cannot hang.
         try {
-          if (socket.readyState === 1) socket.send(JSON.stringify({ type: "stop" }));
+          if (socket.readyState === WS_OPEN) socket.send(JSON.stringify({ type: "stop" }));
         } catch {
           /* already closing */
         }
-        try {
-          socket.close(1000, "client stop");
-        } catch {
-          /* already closing */
-        }
+        stopTimer = setTimeout(() => {
+          try {
+            socket.close(1000, "client stop");
+          } catch {
+            /* already gone */
+          }
+        }, STOP_TIMEOUT_MS);
       },
       closed,
     };
   }
 }
 
-async function resolveAudioBase64(params: TranscribeBase): Promise<string> {
-  if (typeof params.audioBase64 === "string" && params.audioBase64) return stripDataUrl(params.audioBase64);
-  if (params.audio === undefined) {
+async function resolveAudio(
+  params: TranscribeBase,
+): Promise<{ bytes: Uint8Array; filename: string; type: string }> {
+  let bytes: Uint8Array;
+  if (typeof params.audioBase64 === "string" && params.audioBase64) {
+    bytes = fromBase64(params.audioBase64);
+  } else if (params.audio !== undefined) {
+    bytes = await toUint8Array(params.audio);
+  } else {
     throw new TypeError("Provide `audio` (bytes/blob) or `audioBase64`.");
   }
-  const bytes = await toUint8Array(params.audio);
   if (!bytes.length) throw new TypeError("`audio` is empty.");
-  return toBase64(bytes);
-}
-
-async function toUint8Array(audio: AudioInput): Promise<Uint8Array> {
-  if (audio instanceof Uint8Array) return audio;
-  if (audio instanceof ArrayBuffer) return new Uint8Array(audio);
-  if (typeof Blob !== "undefined" && audio instanceof Blob) {
-    return new Uint8Array(await audio.arrayBuffer());
+  if (bytes.length > MAX_AUDIO_BYTES) {
+    throw new RangeError(
+      `\`audio\` is ${bytes.length} bytes; Duyu accepts at most 100 MB (and 2 hours) per request.`,
+    );
   }
-  throw new TypeError("`audio` must be a Uint8Array, ArrayBuffer or Blob.");
+  const meta = params.audio_format ? AUDIO_META[params.audio_format] : undefined;
+  return {
+    bytes,
+    filename: meta ? `audio.${meta.ext}` : "audio.bin",
+    type: meta?.type ?? "application/octet-stream",
+  };
 }
 
-function stripDataUrl(value: string): string {
-  const comma = value.indexOf(",");
-  return value.startsWith("data:") && comma >= 0 ? value.slice(comma + 1) : value;
-}
-
-export function toBase64(bytes: Uint8Array): string {
-  const btoaFn = (globalThis as { btoa?: (s: string) => string }).btoa;
-  if (typeof btoaFn === "function") {
-    let binary = "";
-    const chunk = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-    }
-    return btoaFn(binary);
-  }
-  const BufferCtor = (globalThis as { Buffer?: { from(b: Uint8Array): { toString(enc: string): string } } }).Buffer;
-  if (BufferCtor) return BufferCtor.from(bytes).toString("base64");
-  throw new PatientDeskError("No base64 encoder available (need `btoa` or `Buffer`).", {
-    status: 0,
-    code: "no_base64",
-  });
-}
+export { toBase64 };

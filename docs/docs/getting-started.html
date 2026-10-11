@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Getting started · patientdesk-sdk docs</title>
-  <meta name="description" content="`patientdesk-sdk` is an **unofficial** client for PatientDesk's Turkish voice models. It wraps **Alania** text-to-speech and **Duyu** speech-to-text, plus a keyless Statuspage hea…">
+  <meta name="description" content="`patientdesk-sdk` is an **unofficial** client for PatientDesk's Turkish voice models. It wraps **Alania** text-to-speech and **Duyu** speech-to-text, the account/catalog endpoints…">
   <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/getting-started.html">
   <meta property="og:title" content="Getting started · patientdesk-sdk docs">
-  <meta property="og:description" content="`patientdesk-sdk` is an **unofficial** client for PatientDesk's Turkish voice models. It wraps **Alania** text-to-speech and **Duyu** speech-to-text, plus a keyless Statuspage hea…">
+  <meta property="og:description" content="`patientdesk-sdk` is an **unofficial** client for PatientDesk's Turkish voice models. It wraps **Alania** text-to-speech and **Duyu** speech-to-text, the account/catalog endpoints…">
   <meta property="og:type" content="article">
   <link rel="stylesheet" href="../assets/site.css">
   <script defer src="https://umami.ordu.dev/script.js" data-website-id="250bd07e-3f44-447c-9e94-b4b012366c75"></script>
@@ -70,9 +70,11 @@
       <main class="doc-main">
         <article class="markdown prose"><h1 id="getting-started">Getting started</h1>
 <p><code>patientdesk-sdk</code> is an <strong>unofficial</strong> client for PatientDesk&#39;s Turkish voice
-models. It wraps <strong>Alania</strong> text-to-speech and <strong>Duyu</strong> speech-to-text, plus a
-keyless Statuspage health check. It has zero runtime dependencies and uses the
-global <code>fetch</code> and <code>WebSocket</code>, both of which can be injected.</p>
+models. It wraps <strong>Alania</strong> text-to-speech and <strong>Duyu</strong> speech-to-text, the
+account/catalog endpoints (<code>/v1/voices</code>, <code>/v1/pronunciations</code>, <code>/v1/styles</code>,
+<code>/v1/alania/models</code>, usage) and keyless health checks. It has zero runtime
+dependencies and uses the global <code>fetch</code>, <code>FormData</code>, <code>Blob</code> and <code>WebSocket</code>,
+all of which can be injected.</p>
 <blockquote>
 <p>Not affiliated with, endorsed by, or supported by PatientDesk. It is an
 independent client for their public, OpenAI-compatible API.</p>
@@ -83,8 +85,9 @@ independent client for their public, OpenAI-compatible API.</p>
   install[Install package] --> client[new PatientDesk]
   client --> tts["speech.create()<br/>Alania TTS"]
   client --> stt["audio.transcribe()<br/>Duyu STT"]
-  client --> stream["audio.transcribeStream()<br/>experimental"]
-  client --> status["fetchStatus()<br/>no API key"]</div></div>
+  client --> stream["speech.stream() / socket()<br/>transcribeStream()"]
+  client --> account["voices / pronunciations<br/>styles / models / usage"]
+  client --> status["fetchStatus()<br/>fetchAlaniaHealth()"]</div></div>
 </figure>
 <p><strong>Need:</strong> <a href="https://nodejs.org/">Node.js 20+</a>, an API key from
 <a href="https://speech.patientdesk.ai">speech.patientdesk.ai</a>. Deno, Bun and edge
@@ -106,7 +109,8 @@ also pass it directly to the constructor.</p>
 
 const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
 
-// Text to speech (Alania)
+// Text to speech (Alania). The SDK defaults to alania-v1 (24 kHz) for backward
+// compatibility; pass model: &quot;alania-v2&quot; for the API&#39;s current default (48 kHz).
 const speech = await pd.speech.create({
   input: &quot;Randevunuz oluşturuldu.&quot;,
   response_format: &quot;wav&quot;,
@@ -122,11 +126,14 @@ const { text } = await pd.audio.transcribe({
 console.log(text);
 </code></pre>
 <h2 id="4-health-check-no-key">4. Health check (no key)</h2>
-<pre><code class="language-ts">import { fetchStatus, isOperational, statusDescription } from &quot;patientdesk-sdk&quot;;
+<pre><code class="language-ts">import { fetchStatus, fetchAlaniaHealth, isOperational, statusDescription } from &quot;patientdesk-sdk&quot;;
 
 const status = await fetchStatus();
 console.log(statusDescription(status)); // &quot;All Systems Operational&quot;
 console.log(isOperational(status) ? &quot;up&quot; : &quot;degraded&quot;);
+
+const health = await fetchAlaniaHealth(); // GET /health/alania, per-model status
+console.log(health.status, health.models?.[&quot;alania-v2&quot;]?.status);
 </code></pre>
 <h2 id="what-is-on-the-client">What is on the client</h2>
 <table>
@@ -140,17 +147,47 @@ console.log(isOperational(status) ? &quot;up&quot; : &quot;degraded&quot;);
 <tbody><tr>
 <td><code>pd.speech</code></td>
 <td><code>SpeechApi</code></td>
-<td>Alania text-to-speech.</td>
+<td>Alania text-to-speech, HTTP streaming and the WebSocket session.</td>
 </tr>
 <tr>
 <td><code>pd.audio</code></td>
 <td><code>AudioApi</code></td>
-<td>Duyu speech-to-text, REST and streaming.</td>
+<td>Duyu speech-to-text, multipart REST and WebSocket streaming.</td>
+</tr>
+<tr>
+<td><code>pd.voices</code></td>
+<td><code>VoicesApi</code></td>
+<td>List, save and delete voices (<code>/v1/voices</code>).</td>
+</tr>
+<tr>
+<td><code>pd.pronunciations</code></td>
+<td><code>PronunciationsApi</code></td>
+<td>Manage the saved pronunciation dictionary.</td>
+</tr>
+<tr>
+<td><code>pd.styles</code></td>
+<td><code>StylesApi</code></td>
+<td>List the ready-made style ids.</td>
+</tr>
+<tr>
+<td><code>pd.models</code></td>
+<td><code>ModelsApi</code></td>
+<td>List the Alania model catalog.</td>
+</tr>
+<tr>
+<td><code>pd.usage()</code></td>
+<td><code>Promise&lt;UsageResponse&gt;</code></td>
+<td>Account quota usage.</td>
 </tr>
 <tr>
 <td><code>pd.baseUrl</code></td>
 <td><code>string</code></td>
 <td>Resolved API base URL.</td>
+</tr>
+<tr>
+<td><code>pd.origin</code></td>
+<td><code>string</code></td>
+<td>HTTPS origin (no <code>/v1</code>), for health checks.</td>
 </tr>
 <tr>
 <td><code>pd.apiKey</code></td>
@@ -173,7 +210,7 @@ console.log(isOperational(status) ? &quot;up&quot; : &quot;degraded&quot;);
 <li><a href="recipes.html">Node.js recipes</a>: speak, transcribe a file, use the microphone.</li>
 <li><a href="text-to-speech.html">Text to speech</a>: every Alania parameter and output shape.</li>
 <li><a href="speech-to-text.html">Speech to text</a>: formats, timestamps, subtitles.</li>
-<li><a href="streaming.html">Streaming</a>: the experimental WebSocket session.</li>
+<li><a href="streaming.html">Streaming</a>: HTTP streaming and both WebSocket sessions.</li>
 <li><a href="errors.html">Errors</a>: retries, backoff and rate limits.</li>
 <li><a href="testing.html">Testing</a>: how to run the offline and live suites.</li>
 </ul>

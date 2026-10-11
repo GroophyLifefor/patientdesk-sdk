@@ -50,3 +50,43 @@ test("live: an unknown voice is rejected with 400, not a silent success", { skip
     }),
   );
 });
+
+test("live: alania-v2 returns a 48 kHz WAV and reports its headers", { skip }, async (t) => {
+  const tts = await guard(t, "synthesizing with alania-v2", () =>
+    client.speech.create({
+      model: "alania-v2",
+      voice: "alania2-f1",
+      input: sampleTurKce(),
+      response_format: "wav",
+    }),
+  );
+  if (!tts) return;
+  assert.equal(tts.model, "alania-v2");
+  assert.ok(tts.characters !== null && tts.characters > 0, "expected billed characters");
+  assert.ok(tts.requestId, "expected x-request-id");
+  const { fmt } = parseWav(new Uint8Array(await tts.arrayBuffer()));
+  assert.equal(fmt.sampleRate, 48000, "48 kHz");
+});
+
+test("live: a ready style changes the delivery (support-warm)", { skip }, async (t) => {
+  const tts = await guard(t, "synthesizing with a style", () =>
+    client.speech.create({
+      model: "alania-v2",
+      voice: "alania2-f1",
+      style: "support-warm",
+      input: "Merhaba, size nasıl yardımcı olabilirim?",
+    }),
+  );
+  if (!tts) return;
+  const bytes = new Uint8Array(await tts.arrayBuffer());
+  assert.ok(bytes.length > 44, "expected audio");
+});
+
+test("live: the free antalia-mini model bills zero characters", { skip }, async (t) => {
+  const tts = await guard(t, "synthesizing with antalia-mini", () =>
+    client.speech.create({ model: "antalia-mini", input: "Merhaba" }),
+  );
+  if (!tts) return;
+  assert.equal(tts.model, "antalia-mini");
+  assert.equal(tts.characters, 0);
+});

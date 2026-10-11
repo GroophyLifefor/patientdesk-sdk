@@ -1,4 +1,5 @@
-import { DEFAULT_STATUS_URL } from "./client.js";
+import { DEFAULT_ORIGIN, DEFAULT_STATUS_URL } from "./client.js";
+import type { AlaniaHealthResponse } from "./types.js";
 
 export interface StatusPage {
   id?: string;
@@ -32,16 +33,24 @@ export interface FetchStatusOptions {
   retries?: number;
 }
 
+export interface FetchHealthOptions {
+  /** API origin. Defaults to `https://voice.patientdesk.ai`. */
+  origin?: string;
+  /** Custom `fetch`. Defaults to the global one. */
+  fetch?: typeof fetch;
+  /** Timeout in milliseconds. Defaults to 10000. */
+  timeout?: number;
+  /** Abort signal. */
+  signal?: AbortSignal;
+  /** Number of retries for network errors / 5xx. Defaults to 1. */
+  retries?: number;
+}
+
 /** Indicators Statuspage uses; anything other than `none` is degraded. */
 const DEGRADED = new Set(["minor", "major", "critical", "maintenance"]);
 
-/**
- * Fetch PatientDesk's Statuspage summary (`/api/v2/status.json`).
- * This is a standalone helper: it takes no API key, so a `full-test` can check
- * service health before touching the paid/live endpoints.
- */
-export async function fetchStatus(options: FetchStatusOptions = {}): Promise<StatusResponse> {
-  const url = options.url ?? DEFAULT_STATUS_URL;
+/** Fetch a JSON endpoint with timeout + retries. */
+async function fetchJson(url: string, options: FetchStatusOptions): Promise<unknown> {
   const doFetch = options.fetch ?? globalThis.fetch?.bind(globalThis);
   if (!doFetch) throw new Error("No global `fetch` found. Pass a `fetch` implementation.");
   const timeout = options.timeout ?? 10_000;
@@ -61,7 +70,7 @@ export async function fetchStatus(options: FetchStatusOptions = {}): Promise<Sta
     try {
       const res = await doFetch(url, { signal: controller.signal, headers: { accept: "application/json" } });
       if (!res.ok) throw new Error(`status endpoint returned HTTP ${res.status}`);
-      return (await res.json()) as StatusResponse;
+      return await res.json();
     } catch (err) {
       lastError = err;
       if (caller?.aborted || attempt === retries) break;
@@ -71,6 +80,24 @@ export async function fetchStatus(options: FetchStatusOptions = {}): Promise<Sta
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+/**
+ * Fetch PatientDesk's Statuspage summary (`/api/v2/status.json`).
+ * This is a standalone helper: it takes no API key, so a `full-test` can check
+ * service health before touching the paid/live endpoints.
+ */
+export async function fetchStatus(options: FetchStatusOptions = {}): Promise<StatusResponse> {
+  return (await fetchJson(options.url ?? DEFAULT_STATUS_URL, options)) as StatusResponse;
+}
+
+/**
+ * Fetch the API's own health endpoint (`GET /health/alania`, no key): per-model
+ * status plus a global one. A model reports `degraded` while it is loading.
+ */
+export async function fetchAlaniaHealth(options: FetchHealthOptions = {}): Promise<AlaniaHealthResponse> {
+  const origin = (options.origin ?? DEFAULT_ORIGIN).replace(/\/+$/, "");
+  return (await fetchJson(`${origin}/health/alania`, options)) as AlaniaHealthResponse;
 }
 
 /** `true` when the status page reports no degradation. */

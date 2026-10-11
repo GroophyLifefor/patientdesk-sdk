@@ -114,13 +114,13 @@ const pd = new PatientDesk({
 <td><code>WebSocket</code></td>
 <td><code>WebSocketConstructor</code></td>
 <td>global <code>WebSocket</code></td>
-<td>Needed only for streaming STT.</td>
+<td>Needed for streaming STT and the TTS socket.</td>
 </tr>
 <tr>
 <td><code>maxRetries</code></td>
 <td><code>number</code></td>
 <td><code>2</code></td>
-<td>Retries for 429, 5xx and network errors.</td>
+<td>Retries for 429, 5xx and network errors. <code>quota_exceeded</code> is never retried.</td>
 </tr>
 <tr>
 <td><code>timeout</code></td>
@@ -180,6 +180,11 @@ const pd = new PatientDesk({
 <td></td>
 </tr>
 <tr>
+<td><code>DEFAULT_ORIGIN</code></td>
+<td><code>https://voice.patientdesk.ai</code></td>
+<td>Used by <code>fetchAlaniaHealth</code>.</td>
+</tr>
+<tr>
 <td><code>DEFAULT_STATUS_URL</code></td>
 <td><code>https://status.patientdesk.ai/api/v2/status.json</code></td>
 <td></td>
@@ -195,9 +200,14 @@ const pd = new PatientDesk({
 <td>Alania input limit.</td>
 </tr>
 <tr>
+<td><code>MAX_REFERENCE_BYTES</code></td>
+<td><code>10 * 1024 * 1024</code></td>
+<td>Voice-clone sample limit.</td>
+</tr>
+<tr>
 <td><code>MAX_AUDIO_BYTES</code></td>
-<td><code>9 * 1024 * 1024</code></td>
-<td>Duyu audio limit.</td>
+<td><code>100 * 1024 * 1024</code></td>
+<td>Duyu audio limit per request.</td>
 </tr>
 <tr>
 <td><code>CONTENT_TYPE</code></td>
@@ -217,7 +227,8 @@ accepted.</p>
 });
 </code></pre>
 <h2 id="custom-websocket">Custom <code>WebSocket</code></h2>
-<p>Node 20 and 21 have no global <code>WebSocket</code>. Inject one for streaming.</p>
+<p>Node 20 and 21 have no global <code>WebSocket</code>. Inject one for <code>transcribeStream()</code>
+and <code>speech.socket()</code>.</p>
 <pre><code class="language-ts">import WebSocket from &quot;ws&quot;;
 
 const pd = new PatientDesk({ apiKey, WebSocket });

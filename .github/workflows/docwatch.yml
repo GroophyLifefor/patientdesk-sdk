@@ -1,0 +1,94 @@
+name: Docwatch
+
+# Watches PatientDesk's public docs (TR + EN). On drift it opens (or comments
+# on) a `docs-drift` issue with a per-page diff, then advances the baseline
+# snapshots on the `upstream-docs` branch. `main` is never touched.
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # 09:00 Europe/Istanbul (UTC+3)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: docwatch
+  cancel-in-progress: false
+
+jobs:
+  docs-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Switch to the snapshot branch
+        run: |
+          if git show-ref --verify --quiet refs/remotes/origin/upstream-docs; then
+            git checkout -B upstream-docs origin/upstream-docs
+          else
+            echo "upstream-docs does not exist yet; bootstrapping from the default branch"
+            git checkout -B upstream-docs
+          fi
+
+      - name: Check the docs against the snapshots
+        id: drift
+        run: |
+          node scripts/docwatch.mjs sync --report drift-report.md
+          if git diff --quiet -- upstream-docs ':(exclude)upstream-docs/manifest.json'; then
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+            echo "No documentation drift."
+          else
+            changed=$(git diff --name-only -- upstream-docs | grep -c '\.md$' || true)
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+            echo "changed=$changed" >> "$GITHUB_OUTPUT"
+            git diff --stat -- upstream-docs
+          fi
+
+      - name: Open or update the docs-drift issue
+        if: steps.drift.outputs.drift == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create docs-drift --color 0E8A16 \
+            --description "PatientDesk dokümanlarında değişiklik var" >/dev/null 2>&1 || true
+          {
+            echo ""
+            echo "---"
+            echo ""
+            echo "Dokümanlar değişti; SDK'yı güncellemek için kullanın. @GroophyLifefor"
+          } >> drift-report.md
+          existing=$(gh issue list --label docs-drift --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file drift-report.md
+          else
+            gh issue create \
+              --title "Dokümanlar değişti: ${{ steps.drift.outputs.changed }} sayfa ($(date -u +%F))" \
+              --label docs-drift \
+              --assignee GroophyLifefor \
+              --body-file drift-report.md
+          fi
+
+      - name: Upload the full report
+        if: steps.drift.outputs.drift == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-drift-report
+          path: drift-report.md
+          retention-days: 30
+
+      - name: Advance the baseline snapshots
+        if: steps.drift.outputs.drift == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add upstream-docs
+          git commit -m "chore(docwatch): upstream snapshot ($(date -u +%F)) [skip ci]"
+          git push origin HEAD:upstream-docs

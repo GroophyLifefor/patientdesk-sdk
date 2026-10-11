@@ -1,7 +1,7 @@
 {
   "name": "patientdesk-sdk",
-  "version": "0.1.0",
-  "description": "Unofficial SDK for PatientDesk Turkish voice models — Alania (text-to-speech) and Duyu (speech-to-text, REST + streaming).",
+  "version": "0.2.0",
+  "description": "Unofficial SDK for PatientDesk Turkish voice models — Alania (text-to-speech, REST + streaming) and Duyu (speech-to-text, multipart + streaming), plus voices, pronunciations, styles, models and health.",
   "keywords": [
     "patientdesk",
     "alania",
@@ -48,6 +48,8 @@
     "example:mic": "node examples/stt-mic.mjs",
     "example:live": "node examples/stt-live.mjs",
     "docs:build": "node scripts/build-docs.mjs",
+    "upstream:diff": "node scripts/docwatch.mjs diff",
+    "upstream:sync": "node scripts/docwatch.mjs sync",
     "prepublishOnly": "npm run build"
   },
   "repository": {

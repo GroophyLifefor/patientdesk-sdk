@@ -151,9 +151,10 @@ export function playFile(path, contentType) {
   });
 }
 
-/** Play raw PCM (used by the streaming TTS example). */
-export function playPcmStream(stream, { sampleRate = 24000, channels = 1 } = {}) {
+/** Play raw PCM from an async iterable (used by the streaming TTS example). */
+export async function playPcmStream(chunks, { sampleRate = 24000, channels = 1 } = {}) {
   if (!hasFfplay()) throw new Error("ffplay is required for streaming playback. Install ffmpeg.");
+  const { Readable } = await import("node:stream");
   const ff = spawn(
     "ffplay",
     [
@@ -167,7 +168,7 @@ export function playPcmStream(stream, { sampleRate = 24000, channels = 1 } = {})
     ],
     { stdio: ["pipe", "inherit", "inherit"] },
   );
-  stream.pipe(ff.stdin);
+  Readable.from(chunks).pipe(ff.stdin);
   return new Promise((resolve, reject) => {
     ff.on("error", reject);
     ff.on("close", resolve);

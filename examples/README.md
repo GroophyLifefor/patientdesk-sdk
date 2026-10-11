@@ -16,10 +16,10 @@ Install ffmpeg if you do not have it:
 
 | File | What it does |
 | --- | --- |
-| `tts.mjs` | Speak text with Alania, save it, and play it. `--stream` pipes PCM to ffplay for low latency. |
-| `stt-file.mjs` | Transcribe an audio file with Duyu, with `verbose_json`, `srt` and `vtt` modes. |
+| `tts.mjs` | Speak text with Alania, save it, and play it. `--stream` pipes PCM to ffplay; `--model/--voice/--style/--instructions` opt into Alania-2 features; `--telephone` writes 8 kHz G.711 μ-law. |
+| `stt-file.mjs` | Transcribe an audio file with Duyu (multipart upload), with `verbose_json`, `srt` and `vtt` modes. |
 | `stt-mic.mjs` | Record N seconds from the microphone with ffmpeg, then transcribe it. |
-| `stt-live.mjs` | Stream the microphone to Duyu over WebSocket and print live transcripts. |
+| `stt-live.mjs` | Stream the microphone to Duyu over WebSocket and print live drafts/finals. |
 
 ## Text to speech
 
@@ -27,6 +27,8 @@ Install ffmpeg if you do not have it:
 node examples/tts.mjs "Randevunuz yarın saat 14:05 için oluşturuldu."
 node examples/tts.mjs "Hello" --format mp3 --out hello.mp3
 node examples/tts.mjs "Low latency" --stream   # plays while it downloads
+node examples/tts.mjs "Merhaba" --model alania-v2 --voice alania2-m1 --style support-warm
+node examples/tts.mjs "Görüşmeniz kayıt altına alınmaktadır." --telephone --out karsilama.ulaw
 ```
 
 ## Speech to text
@@ -51,5 +53,6 @@ node examples/stt-live.mjs 10
   implementation passed to the client.
 - These scripts import `patientdesk-sdk`. From a clone, run `npm run build` first
   so `dist/` exists. When installed from npm, they work as is.
-- The WebSocket streaming endpoint is undocumented, so `stt-live.mjs` is
-  experimental. See the [Streaming guide](../docs/md/streaming.md).
+- The default model is `alania-v1` (24 kHz). Pass `--model alania-v2` for 48 kHz
+  and the newer voices. See the [Text to speech guide](../docs/md/text-to-speech.md)
+  and the [Streaming guide](../docs/md/streaming.md).

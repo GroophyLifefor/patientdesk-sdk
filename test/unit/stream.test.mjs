@@ -2,41 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { PatientDesk, PatientDeskError } from "../../dist/index.js";
 import { mockFetch, errorResponse } from "../../helpers/fetch-mock.mjs";
-
-// Records a scripted websocket so we can prove down / streaming behaviour
-// without touching the real service.
-class FakeWebSocket {
-  static instances = [];
-  constructor(url, protocols) {
-    this.url = url;
-    this.protocols = protocols;
-    this.readyState = 0;
-    this.sent = [];
-    this.closed = null;
-    this.binaryType = "blob";
-    FakeWebSocket.instances.push(this);
-  }
-  send(data) {
-    this.sent.push(data);
-  }
-  close(code = 1000, reason = "") {
-    this.readyState = 3;
-    this.closed = { code, reason };
-    this.onclose?.({ code, reason });
-  }
-  // Test helpers
-  open() {
-    this.readyState = 1;
-    this.onopen?.({});
-  }
-  message(obj) {
-    this.onmessage?.({ data: JSON.stringify(obj) });
-  }
-  serverClose(code = 1000, reason = "") {
-    this.readyState = 3;
-    this.onclose?.({ code, reason });
-  }
-}
+import { FakeWebSocket } from "../../helpers/ws-mock.mjs";
 
 test("transcribeStream throws a clear error when no WebSocket is available", () => {
   const pd = new PatientDesk({ apiKey: "k", fetch: mockFetch(() => errorResponse({ status: 500 })), WebSocket: undefined });
@@ -49,48 +15,67 @@ test("transcribeStream throws a clear error when no WebSocket is available", () 
   });
 });
 
-test("transcribeStream sends a start frame on open and routes events", async () => {
+test("transcribeStream sends a start frame on open and routes every event", async () => {
   FakeWebSocket.instances = [];
   const pd = new PatientDesk({ apiKey: "pd_k", fetch: mockFetch(() => errorResponse({ status: 500 })), WebSocket: FakeWebSocket });
-  const seen = { ready: null, finals: [], errors: [] };
+  const seen = { ready: null, vad: [], partials: [], segments: [], finals: [], stopped: null, errors: [] };
 
   const stream = pd.audio.transcribeStream(
     {
       ready: (info) => (seen.ready = info),
+      vad: (info) => seen.vad.push(info.active),
+      partial: (text) => seen.partials.push(text),
+      segmentStart: (info) => seen.segments.push(info.start),
+      segmentEnd: (info) => seen.segments.push(info.end),
       final: (text) => seen.finals.push(text),
+      stopped: (info) => (seen.stopped = info),
       error: (message) => seen.errors.push(message),
     },
-    { sampleRate: 16000, eagerFinal: true },
+    { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200 },
   );
 
   const socket = FakeWebSocket.instances[0];
-  assert.match(socket.url, /^wss:\/\/voice\.patientdesk\.ai\/v1\/audio\/stream\?token=pd_k$/);
+  assert.match(socket.url, /^wss:\/\/voice\.patientdesk\.ai\/v1\/audio\/stream\?key=pd_k$/);
 
   socket.open();
-  assert.deepEqual(JSON.parse(socket.sent[0]), { type: "start", sampleRate: 16000, eager_final: true });
+  assert.deepEqual(JSON.parse(socket.sent[0]), {
+    type: "start",
+    sampleRate: 16000,
+    eager_final: true,
+    partials: true,
+    partial_ms: 200,
+  });
 
-  socket.message({ type: "ready", model: "duyu-1" });
+  socket.message({ type: "ready", model: "duyu-1", quota: { remaining_s: 7130 } });
   assert.equal(seen.ready.model, "duyu-1");
+  assert.deepEqual(seen.ready.quota, { remaining_s: 7130 });
 
-  socket.message({ type: "final", text: "merhaba" });
-  assert.deepEqual(seen.finals, ["merhaba"]);
-
+  socket.message({ type: "vad", prob: 0.91, active: true });
+  socket.message({ type: "segment_start", start: 0.42 });
+  socket.message({ type: "partial", text: "Yarın saat" });
+  socket.message({ type: "segment_end", end: 3.1 });
+  socket.message({ type: "final", text: "merhaba", start: 0.42, end: 3.1, audio_s: 2.68, infer_ms: 118, rtf: 0.04 });
+  socket.message({ type: "stopped", audio_s: 2.68 });
   socket.message({ type: "error", message: "boom" });
-  assert.deepEqual(seen.errors, ["boom"]);
-
   socket.message("not json"); // ignored, no throw
+
+  assert.deepEqual(seen.vad, [true]);
+  assert.deepEqual(seen.partials, ["Yarın saat"]);
+  assert.deepEqual(seen.segments, [0.42, 3.1]);
+  assert.deepEqual(seen.finals, ["merhaba"]);
+  assert.equal(seen.stopped.audioSeconds, 2.68);
+  assert.deepEqual(seen.errors, ["boom"]);
 
   const audio = new Uint8Array([1, 2, 3]);
   stream.sendAudio(audio);
   assert.equal(socket.sent[1], audio);
+});
 
-  let closed = false;
-  stream.closed.then(() => (closed = true));
-  stream.stop();
-  assert.deepEqual(JSON.parse(socket.sent[2]), { type: "stop" });
-  assert.deepEqual(socket.closed, { code: 1000, reason: "client stop" });
-  await stream.closed;
-  assert.equal(closed, true);
+test("transcribeStream can authenticate with a session token", () => {
+  FakeWebSocket.instances = [];
+  const pd = new PatientDesk({ apiKey: "pd_k", fetch: mockFetch(() => errorResponse({ status: 500 })), WebSocket: FakeWebSocket });
+  pd.audio.transcribeStream({}, { token: "session.jwt" });
+  assert.match(FakeWebSocket.instances[0].url, /\?token=session\.jwt/);
 });
 
 test("sendAudio is a no-op before the socket opens", () => {
@@ -105,6 +90,28 @@ test("sendAudio is a no-op before the socket opens", () => {
   assert.equal(socket.sent.length, 1); // the start frame
   stream.sendAudio(new Uint8Array([2]));
   assert.equal(socket.sent.length, 2); // now the audio goes out
+});
+
+test("stop() sends the stop frame and waits for the server to close", async () => {
+  FakeWebSocket.instances = [];
+  const pd = new PatientDesk({ apiKey: "k", fetch: mockFetch(() => errorResponse({ status: 500 })), WebSocket: FakeWebSocket });
+  const stream = pd.audio.transcribeStream();
+  const socket = FakeWebSocket.instances[0];
+  socket.open();
+
+  let closed = false;
+  stream.closed.then(() => (closed = true));
+  stream.stop();
+  assert.deepEqual(JSON.parse(socket.sent[1]), { type: "stop" });
+  // The socket stays open until the server finalizes the open sentence.
+  assert.equal(closed, false);
+  assert.equal(socket.readyState, 1);
+
+  socket.message({ type: "final", text: "son" });
+  socket.message({ type: "stopped", audio_s: 1.2 });
+  socket.serverClose(1000, "done");
+  await stream.closed;
+  assert.equal(closed, true);
 });
 
 test("a server-side close resolves closed and reports the code", async () => {

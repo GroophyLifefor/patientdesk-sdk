@@ -101,3 +101,134 @@ test("a 400 invalid_request surfaces code + message", async () => {
     return true;
   });
 });
+
+test("create() forwards the alania-v2 fields and picks the model's default voice", async () => {
+  const fetch = mockFetch(() => audio());
+  const pd = new PatientDesk({ apiKey: "k", fetch });
+  await pd.speech.create({
+    model: "alania-v2",
+    input: "x",
+    style: "support-warm",
+    instructions: "speaking slowly",
+    pronunciations: { PatientDesk: "Peyşınt Desk" },
+    cfg: 2.5,
+    sample_rate: 16000,
+    consent: true,
+  });
+  assert.deepEqual(JSON.parse(fetch.calls[0].init.body), {
+    model: "alania-v2",
+    input: "x",
+    voice: "alania2-f1",
+    response_format: "wav",
+    sample_rate: 16000,
+    style: "support-warm",
+    instructions: "speaking slowly",
+    consent: true,
+    pronunciations: { PatientDesk: "Peyşınt Desk" },
+    cfg: 2.5,
+  });
+
+  await pd.speech.create({ model: "antalia-mini", input: "x" });
+  assert.equal(JSON.parse(fetch.calls[1].init.body).voice, "antalia-mini");
+
+  await pd.speech.create({ model: "alania-v1", input: "x" });
+  assert.equal(JSON.parse(fetch.calls[2].init.body).voice, "alania");
+});
+
+test("create() base64-encodes reference_audio and forwards the clone fields", async () => {
+  const fetch = mockFetch(() => audio());
+  const pd = new PatientDesk({ apiKey: "k", fetch });
+  await pd.speech.create({
+    model: "alania-v2",
+    input: "x",
+    reference_audio: new Uint8Array([1, 2, 3]),
+    reference_text: "Merhaba",
+    consent: true,
+  });
+  const body = JSON.parse(fetch.calls[0].init.body);
+  assert.equal(body.reference_audio, "AQID");
+  assert.equal(body.reference_text, "Merhaba");
+  assert.equal(body.consent, true);
+});
+
+test("create() exposes the response headers (model, characters, timings, rate)", async () => {
+  const fetch = mockFetch(
+    () =>
+      new Response(new Uint8Array([1, 2]), {
+        status: 200,
+        headers: {
+          "content-type": "audio/L16; rate=16000",
+          "x-request-id": "req-1",
+          "x-model": "alania-v2",
+          "x-disclosure": "ai-generated",
+          "x-characters": "45",
+          "x-audio-seconds": "3.18",
+          "x-queue-wait-ms": "12",
+        },
+      }),
+  );
+  const pd = new PatientDesk({ apiKey: "k", fetch });
+  const speech = await pd.speech.create({ input: "x", response_format: "pcm" });
+  assert.equal(speech.contentType, "audio/L16");
+  assert.equal(speech.requestId, "req-1");
+  assert.equal(speech.model, "alania-v2");
+  assert.equal(speech.characters, 45);
+  assert.equal(speech.audioSeconds, 3.18);
+  assert.equal(speech.queueWaitMs, 12);
+  assert.equal(speech.sampleRate, 16000);
+});
+
+test("create() falls back to the G.711 content types", async () => {
+  const fetch = mockFetch(() => new Response(new Uint8Array([1]), { status: 200, headers: {} }));
+  const pd = new PatientDesk({ apiKey: "k", fetch });
+  assert.equal((await pd.speech.create({ input: "x", response_format: "mulaw" })).contentType, "audio/PCMU");
+  assert.equal((await pd.speech.create({ input: "x", response_format: "alaw" })).contentType, "audio/PCMA");
+});
+
+test("stream() sets stream:true, strips the WAV header and carries a split sample", async () => {
+  const header = new Uint8Array(44);
+  header.set([0x52, 0x49, 0x46, 0x46], 0); // RIFF
+  header.set([0x57, 0x41, 0x56, 0x45], 8); // WAVE
+  const first = new Uint8Array([...header, 10, 11, 12]); // header + 1.5 samples
+  const second = new Uint8Array([13, 14, 15]);
+  const fetch = mockFetch(
+    () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(first);
+            controller.enqueue(second);
+            controller.close();
+          },
+        }),
+        { status: 200, headers: { "content-type": "audio/wav" } },
+      ),
+  );
+  const pd = new PatientDesk({ apiKey: "k", fetch });
+  const chunks = [];
+  for await (const chunk of pd.speech.stream({ input: "x" })) chunks.push([...chunk]);
+  assert.equal(JSON.parse(fetch.calls[0].init.body).stream, true);
+  assert.deepEqual(chunks, [
+    [10, 11],
+    [12, 13, 14, 15],
+  ]);
+});
+
+test("stream() passes headerless mulaw through untouched", async () => {
+  const fetch = mockFetch(
+    () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array([1, 2, 3]));
+            controller.close();
+          },
+        }),
+        { status: 200, headers: { "content-type": "audio/PCMU" } },
+      ),
+  );
+  const pd = new PatientDesk({ apiKey: "k", fetch });
+  const chunks = [];
+  for await (const chunk of pd.speech.stream({ input: "x", response_format: "mulaw" })) chunks.push([...chunk]);
+  assert.deepEqual(chunks, [[1, 2, 3]]);
+});

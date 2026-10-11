@@ -53,12 +53,20 @@ persists, it is on PatientDesk's side. The `full-test` run reports it as
 `PATIENDESK API FAULT while transcribing ...` and can be downgraded to skipped
 with `PATIENDESK_ALLOW_API_FAULTS=1` while the outage lasts.
 
+## STT returns an empty or unrelated transcript
+
+A near-empty or silent file (for example a 44-byte WAV header with no audio) is
+not rejected: the service has been observed answering `200` with `duration: 0`
+and hallucinated text. Check `duration` (and your own silence detection) before
+trusting a transcript. Genuinely undecodable bytes do return
+`400 undecodable_audio`, which is the correct client error.
+
 ## Streaming never becomes ready
 
-The WebSocket endpoint uses a `token` query parameter, not `key`. With `key` the
-socket connects but no `ready` frame ever arrives. With any other name the
-service answers `missing_api_key`. This changed over time, so older clients that
-still send `key` fail silently. See [Streaming](streaming.md#a-known-endpoint-change).
+Both WebSocket sessions authenticate with a query parameter: `?key=` by default
+(or `?token=` for a short-lived session token). The SDK sends `key`, pass
+`{ token }` to use a token instead. If a socket connects and then just sits
+there, check this first.
 
 The handshake is also intermittently refused: a fresh socket sometimes closes
 with code `1006` before `ready`, roughly one attempt in five. Retry two or three
@@ -68,12 +76,20 @@ When the connection is ready and you still get no `final`, check the audio. It
 must be 16 kHz mono signed 16-bit little-endian PCM and contain speech. Silence,
 tones or the wrong framing never produce a transcript.
 
+`stop()` sends `{type:"stop"}` and **waits**: the server finalizes the open
+sentence (`final` + `stopped`) and then closes. The SDK force-closes after 5
+seconds if that never arrives, so callers cannot hang.
+
 ## `429` rate limit
 
 The client raises a `PatientDeskError` with `isRateLimit` true. Read `scope` to
 see whether it is a `user` or `pool` limit, and `resetsAt` for the reset time.
 The client already retried twice, honouring `Retry-After`. Back off until
 `resetsAt`, then retry.
+
+`429 quota_exceeded` is not retried, the monthly quota does not clear by
+waiting. The free `antalia-mini` model has its own limits (`429
+free_limit_exceeded`) and does not consume quota.
 
 ```ts
 if (err instanceof PatientDeskError && err.isRateLimit) {

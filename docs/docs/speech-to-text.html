@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Speech to text · patientdesk-sdk docs</title>
-  <meta name="description" content="Duyu is PatientDesk's speech-to-text model. The public endpoint is `POST /audio/transcriptions` and it takes **base64 audio in a JSON body**. There is no multipart upload and no `…">
+  <meta name="description" content="Duyu is PatientDesk's speech-to-text model. The public endpoint is `POST /audio/transcriptions` and it takes **multipart/form-data** with a `file` field. Up to 100 MB / 2 hours pe…">
   <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/speech-to-text.html">
   <meta property="og:title" content="Speech to text · patientdesk-sdk docs">
-  <meta property="og:description" content="Duyu is PatientDesk's speech-to-text model. The public endpoint is `POST /audio/transcriptions` and it takes **base64 audio in a JSON body**. There is no multipart upload and no `…">
+  <meta property="og:description" content="Duyu is PatientDesk's speech-to-text model. The public endpoint is `POST /audio/transcriptions` and it takes **multipart/form-data** with a `file` field. Up to 100 MB / 2 hours pe…">
   <meta property="og:type" content="article">
   <link rel="stylesheet" href="../assets/site.css">
   <script defer src="https://umami.ordu.dev/script.js" data-website-id="250bd07e-3f44-447c-9e94-b4b012366c75"></script>
@@ -70,21 +70,24 @@
       <main class="doc-main">
         <article class="markdown prose"><h1 id="speech-to-text">Speech to text</h1>
 <p>Duyu is PatientDesk&#39;s speech-to-text model. The public endpoint is
-<code>POST /audio/transcriptions</code> and it takes <strong>base64 audio in a JSON body</strong>. There
-is no multipart upload and no <code>file_id</code>.</p>
+<code>POST /audio/transcriptions</code> and it takes <strong>multipart/form-data</strong> with a <code>file</code>
+field. Up to 100 MB / 2 hours per request. Longer audio is split server-side.
+<code>audioBase64</code> is still accepted by the SDK: it is decoded locally and uploaded
+as the same <code>file</code> part.</p>
 <h2 id="basic-call">Basic call</h2>
 <pre><code class="language-ts">import { readFileSync } from &quot;node:fs&quot;;
 
 const { text } = await pd.audio.transcribe({
   audio: readFileSync(&quot;kayit.m4a&quot;),
-  audio_format: &quot;m4a&quot;,   // optional, detected from the first bytes otherwise
+  audio_format: &quot;m4a&quot;,   // names the upload; the server detects the format
   language: &quot;tr&quot;,        // &quot;tr&quot; (default) or &quot;auto&quot;
   prompt: &quot;ilaç: parol&quot;, // optional spelling hint
 });
 console.log(text);
 </code></pre>
-<p>You can pass raw bytes, an <code>ArrayBuffer</code> or a <code>Blob</code>. Prefer <code>audio_format</code> when
-you know it, and let the server detect it when you do not.</p>
+<p>You can pass raw bytes, an <code>ArrayBuffer</code> or a <code>Blob</code>. <code>audio_format</code> only names
+the uploaded file (extension + MIME type). Duyu detects the real container from
+the first bytes, so omitting it is safe.</p>
 <h2 id="parameters">Parameters</h2>
 <table>
 <thead>
@@ -105,19 +108,19 @@ you know it, and let the server detect it when you do not.</p>
 <td><code>audioBase64</code></td>
 <td><code>string</code></td>
 <td>none</td>
-<td>Pre-encoded audio, no data URL prefix.</td>
+<td>Pre-encoded audio; decoded locally, data URL prefix allowed.</td>
 </tr>
 <tr>
 <td><code>model</code></td>
 <td><code>string</code></td>
 <td><code>&quot;duyu-1&quot;</code></td>
-<td></td>
+<td><code>whisper-1</code> is accepted for compatibility.</td>
 </tr>
 <tr>
 <td><code>audio_format</code></td>
 <td><code>SttFormat</code></td>
 <td>detected</td>
-<td><code>wav</code>, <code>mp3</code>, <code>m4a</code>, <code>webm</code>, <code>ogg</code>, <code>flac</code>.</td>
+<td><code>wav</code>, <code>mp3</code>, <code>m4a</code>, <code>webm</code>, <code>ogg</code>, <code>flac</code>; names the upload.</td>
 </tr>
 <tr>
 <td><code>language</code></td>
@@ -153,10 +156,11 @@ you know it, and let the server detect it when you do not.</p>
 <td><code>extra</code></td>
 <td><code>Record&lt;string, unknown&gt;</code></td>
 <td>unset</td>
-<td>Merged into the body.</td>
+<td>Merged into the form fields.</td>
 </tr>
 </tbody></table>
-<p>The maximum audio size is about 9 MB per request.</p>
+<p>The maximum audio size is 100 MB (and 2 hours) per request. The SDK rejects
+larger input locally with a <code>RangeError</code>.</p>
 <h2 id="response-shapes">Response shapes</h2>
 <p><code>response_format</code> decides the return type, and the overloads reflect it.</p>
 <table>
@@ -219,7 +223,7 @@ const srt = await pd.audio.transcribe({ audio: bytes, response_format: &quot;srt
 <tr>
 <td><code>duration</code></td>
 <td><code>number</code></td>
-<td>Seconds, when reported.</td>
+<td>Seconds; this is the billed duration.</td>
 </tr>
 <tr>
 <td><code>segments</code></td>
@@ -233,16 +237,17 @@ const srt = await pd.audio.transcribe({ audio: bytes, response_format: &quot;srt
 </tr>
 </tbody></table>
 <h2 id="base64-helper">Base64 helper</h2>
-<p><code>toBase64()</code> is exported if you need to build the payload yourself. A <code>data:</code>
-URL prefix is stripped automatically when you pass <code>audioBase64</code>.</p>
+<p><code>toBase64()</code> is exported if you need to build a payload yourself, and
+<code>fromBase64()</code> decodes one. A <code>data:</code> URL prefix is stripped automatically.</p>
 <pre><code class="language-ts">import { toBase64 } from &quot;patientdesk-sdk&quot;;
 
 const b64 = toBase64(new Uint8Array(buf)); // no data: prefix
 await pd.audio.transcribe({ audioBase64: b64, audio_format: &quot;wav&quot; });
 </code></pre>
 <h2 id="live-transcription">Live transcription</h2>
-<p>For microphone use, the WebSocket session is lower latency than the REST call.
-It is undocumented and experimental, so it lives on its own page:
+<p>For microphone use, the WebSocket session is lower latency than the REST call:
+draft <code>partial</code> transcripts while speaking, a <code>final</code> line after the sentence,
+and <code>vad</code>/<code>segment_*</code> events. It is documented and lives on its own page:
 <a href="streaming.html">Streaming</a>.</p>
 <h2 id="service-side-decodes">Service-side decodes</h2>
 <p>PatientDesk&#39;s REST endpoint has been observed returning <code>400 undecodable_audio</code>,

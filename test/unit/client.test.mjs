@@ -16,6 +16,21 @@ test("reads the API key from the environment when omitted", () => {
   }
 });
 
+test("falls back to PATIENDESK_KEY when PATIENDESK_API_KEY is unset", () => {
+  const prevA = process.env.PATIENDESK_API_KEY;
+  const prevB = process.env.PATIENDESK_KEY;
+  delete process.env.PATIENDESK_API_KEY;
+  process.env.PATIENDESK_KEY = "pd_fallback_key";
+  try {
+    const pd = new PatientDesk({ fetch: mockFetch(() => audio()) });
+    assert.equal(pd.apiKey, "pd_fallback_key");
+  } finally {
+    if (prevA !== undefined) process.env.PATIENDESK_API_KEY = prevA;
+    if (prevB === undefined) delete process.env.PATIENDESK_KEY;
+    else process.env.PATIENDESK_KEY = prevB;
+  }
+});
+
 test("throws a clear error when no key is available", () => {
   const prevA = process.env.PATIENDESK_API_KEY;
   const prevB = process.env.PATIENDESK_KEY;
@@ -73,6 +88,17 @@ test("does not retry a 400", async () => {
   const fetch = mockFetch(() => errorResponse({ status: 400, message: "bad" }));
   const pd = new PatientDesk({ apiKey: "k", fetch, maxRetries: 3 });
   await assert.rejects(() => pd.speech.create({ input: "hi" }), PatientDeskError);
+  assert.equal(fetch.calls.length, 1);
+});
+
+test("does not retry quota_exceeded (waiting will not clear it)", async () => {
+  const fetch = mockFetch(() => errorResponse({ status: 429, message: "quota done", code: "quota_exceeded" }));
+  const pd = new PatientDesk({ apiKey: "k", fetch, maxRetries: 3 });
+  await assert.rejects(() => pd.speech.create({ input: "hi" }), (err) => {
+    assert.equal(err.status, 429);
+    assert.equal(err.code, "quota_exceeded");
+    return true;
+  });
   assert.equal(fetch.calls.length, 1);
 });
 

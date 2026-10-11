@@ -56,33 +56,40 @@ async function speak(text: string) {
 await speak("Randevunuz yarın saat 14:05 için oluşturuldu.");
 ```
 
+This uses the SDK's default `alania-v1` (24 kHz). For the API's current model,
+pass `model: "alania-v2"`, `voice: "alania2-f1"` and optionally a `style` or
+`instructions`, see [Text to speech](text-to-speech.md).
+
 ### Low latency playback
 
 For a voice assistant you want audio to start before the whole file arrives.
-Ask for raw PCM and pipe it to `ffplay` as it streams.
+`pd.speech.stream()` yields PCM as it is generated, with the WAV header already
+stripped and split samples carried over.
 
 ```ts
+import { Readable } from "node:stream";
 import { spawn } from "node:child_process";
 import { PatientDesk } from "patientdesk-sdk";
 
 const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
 
 async function speakStreaming(text: string) {
-  const response = await pd.speech.createRaw({ input: text, response_format: "pcm" });
+  const chunks = pd.speech.stream({ model: "alania-v2", input: text, response_format: "pcm" });
 
   const player = spawn("ffplay", [
     "-autoexit", "-nodisp", "-loglevel", "quiet",
-    "-f", "s16le", "-ar", "24000", "-ac", "1", "-i", "-",
+    "-f", "s16le", "-ar", "48000", "-ac", "1", "-i", "-",
   ]);
-  response.body.pipe(player.stdin);
+  Readable.from(chunks).pipe(player.stdin);
   await new Promise((resolve) => player.on("close", resolve));
 }
 
 await speakStreaming("Bir saniye, kaydınızı kontrol ediyorum.");
 ```
 
-`pcm` is uncompressed 16-bit mono, so the sample rate and channel count are
-fixed. `wav` is 24 kHz mono.
+`pcm` is uncompressed 16-bit mono. The rate is 48 kHz for `alania-v2` and
+`antalia-mini`, 24 kHz for `alania-v1`, and it is also in the `Content-Type`
+header (`audio/L16` with `rate=48000`) when you use `createRaw()`.
 
 Run it:
 
@@ -93,8 +100,8 @@ node examples/tts.mjs "Merhaba" --stream
 
 ## Transcribe a file
 
-Send the bytes and read the transcript. Duyu takes base64 JSON, the SDK encodes
-it for you.
+Send the bytes and read the transcript. The SDK uploads them as
+`multipart/form-data` for you.
 
 ```ts
 import { readFile } from "node:fs/promises";
@@ -185,8 +192,8 @@ node examples/stt-mic.mjs 5 --keep --out kayit.wav
 
 ## Live microphone over WebSocket
 
-For a live assistant, streaming is lower latency than record-then-send. It is
-undocumented and experimental, so read [Streaming](streaming.md) first.
+For a live assistant, streaming is lower latency than record-then-send. Read
+[Streaming](streaming.md) first for the full event set.
 
 ```ts
 import { spawn } from "node:child_process";
@@ -195,7 +202,8 @@ import { PatientDesk } from "patientdesk-sdk";
 const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });
 
 const stream = pd.audio.transcribeStream({
-  final: (text) => console.log("final:", text),
+  partial: (draft) => process.stdout.write(`\r… ${draft}`),
+  final: (text) => console.log("\nfinal:", text),
   error: (message) => console.error(message),
 });
 

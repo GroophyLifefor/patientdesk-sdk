@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Streaming · patientdesk-sdk docs</title>
-  <meta name="description" content="`transcribeStream()` speaks the WebSocket protocol that PatientDesk's own voice endpoint uses at `wss://voice.patientdesk.ai/v1/audio/stream`. It is **not** in PatientDesk's publi…">
+  <meta name="description" content="Three streaming paths are documented by PatientDesk. The SDK wraps all of them:">
   <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/streaming.html">
   <meta property="og:title" content="Streaming · patientdesk-sdk docs">
-  <meta property="og:description" content="`transcribeStream()` speaks the WebSocket protocol that PatientDesk's own voice endpoint uses at `wss://voice.patientdesk.ai/v1/audio/stream`. It is **not** in PatientDesk's publi…">
+  <meta property="og:description" content="Three streaming paths are documented by PatientDesk. The SDK wraps all of them:">
   <meta property="og:type" content="article">
   <link rel="stylesheet" href="../assets/site.css">
   <script defer src="https://umami.ordu.dev/script.js" data-website-id="250bd07e-3f44-447c-9e94-b4b012366c75"></script>
@@ -69,103 +69,134 @@
     <div class="content-column">
       <main class="doc-main">
         <article class="markdown prose"><h1 id="streaming">Streaming</h1>
-<p><code>transcribeStream()</code> speaks the WebSocket protocol that PatientDesk&#39;s own voice
-endpoint uses at <code>wss://voice.patientdesk.ai/v1/audio/stream</code>. It is <strong>not</strong> in
-PatientDesk&#39;s public documentation, so treat it as experimental. The protocol
-mirrors what the Ömer desktop assistant uses in production.</p>
-<p>This page describes behavior that can change without notice. For a supported
-path, use the REST endpoint in <a href="speech-to-text.html">Speech to text</a>.</p>
-<h2 id="a-known-endpoint-change">A known endpoint change</h2>
-<p>The endpoint once took the key as a <code>key</code> query parameter. It now expects a
-<code>token</code> query parameter. A <code>key</code> connection opens but never sends a <code>ready</code>
-frame, and any other parameter name gets <code>missing_api_key</code>. The SDK sends
-<code>token</code>. If a socket connects and then just sits there, check this first.</p>
-<p>Authentication is passed in the URL for a browser <code>WebSocket</code>, which cannot set
-headers. Treat the URL as a secret and do not log it.</p>
-<p>The handshake is also intermittently refused. A fresh socket sometimes closes
-with code <code>1006</code> before the <code>ready</code> frame, roughly one attempt in five in our
-observations. Retry the connection a few times before assuming a client bug. The
-<a href="testing.html">live suite</a> does exactly that.</p>
-<h2 id="opening-a-session">Opening a session</h2>
-<pre><code class="language-ts">const stream = pd.audio.transcribeStream(
-  {
-    ready: (info) =&gt; console.log(&quot;ready&quot;, info.model),
-    final: (text) =&gt; console.log(&quot;final:&quot;, text),
-    error: (message) =&gt; console.error(message),
-    close: (code, reason) =&gt; console.log(&quot;closed&quot;, code, reason),
-  },
-  { sampleRate: 16000, eagerFinal: true },
-);
-
-stream.sendAudio(pcmChunk); // raw 16-bit PCM, mono
-stream.stop();              // sends {type:&quot;stop&quot;} then closes
-await stream.closed;
-</code></pre>
-<h2 id="handshake">Handshake</h2>
-<p>The client opens the socket and sends a JSON <code>start</code> frame on <code>open</code>:</p>
-<pre><code class="language-json">{ &quot;type&quot;: &quot;start&quot;, &quot;sampleRate&quot;: 16000, &quot;eager_final&quot;: true }
-</code></pre>
-<p>After that it sends raw audio as <strong>binary</strong> frames. Use 16 kHz mono signed
-16-bit little-endian PCM. Extra fields can be merged into the <code>start</code> frame with
-<code>options.extra</code>.</p>
-<h2 id="events">Events</h2>
+<p>Three streaming paths are documented by PatientDesk. The SDK wraps all of them:</p>
 <table>
 <thead>
 <tr>
-<th>Callback</th>
-<th>When</th>
-<th>Arguments</th>
+<th>Path</th>
+<th>API</th>
+<th>Use when</th>
 </tr>
 </thead>
 <tbody><tr>
-<td><code>ready</code></td>
-<td>Server handshake.</td>
-<td><code>{ model, raw }</code></td>
+<td>HTTP TTS</td>
+<td><code>pd.speech.stream()</code></td>
+<td>One long text, play as it is generated.</td>
 </tr>
 <tr>
-<td><code>final</code></td>
-<td>Final transcript for an utterance.</td>
-<td><code>(text, raw)</code></td>
+<td>WebSocket TTS</td>
+<td><code>pd.speech.socket()</code></td>
+<td>Many sentences over one connection (voice assistants).</td>
 </tr>
 <tr>
-<td><code>error</code></td>
-<td>Server error frame, or a socket error.</td>
-<td><code>(message, raw)</code></td>
-</tr>
-<tr>
-<td><code>close</code></td>
-<td>Socket closed.</td>
-<td><code>(code, reason)</code></td>
+<td>WebSocket STT</td>
+<td><code>pd.audio.transcribeStream()</code></td>
+<td>Live microphone / phone audio, draft + final transcripts.</td>
 </tr>
 </tbody></table>
-<p>Server frames are JSON: <code>ready</code>, <code>final</code>, <code>error</code>.</p>
-<h2 id="the-returned-handle">The returned handle</h2>
+<h2 id="http-streaming-tts">HTTP streaming (TTS)</h2>
+<pre><code class="language-ts">for await (const pcm of pd.speech.stream({
+  model: &quot;alania-v2&quot;,
+  input: longText,
+  response_format: &quot;pcm&quot;, // wav | pcm | mulaw | alaw only
+})) {
+  player.write(pcm);      // 48 kHz mono PCM16 (24 kHz for alania-v1)
+}
+</code></pre>
+<ul>
+<li>A streamed <code>wav</code> response starts with a 44-byte RIFF header whose length fields
+are <code>0xFFFFFFFF</code>, and the helper strips it.</li>
+<li>Network chunks can split a sample: the helper carries the leftover byte into
+the next frame.</li>
+<li>Long text is split at sentence boundaries server-side, with 250 ms of silence
+between parts.</li>
+<li><code>mp3</code>, <code>opus</code>, <code>flac</code> and <code>aac</code> cannot stream, those requests return 400.</li>
+</ul>
+<p><code>createRaw({ stream: true })</code> returns the raw <code>Response</code> if you want to handle
+the body yourself.</p>
+<h2 id="websocket-tts">WebSocket (TTS)</h2>
+<p><code>wss://voice.patientdesk.ai/v1/audio/speech/stream</code> keeps one connection open and
+speaks sentences in order. Auth is <code>?key=</code> (or <code>{ token }</code> for a session token).</p>
+<pre><code class="language-ts">const socket = pd.speech.socket(
+  {
+    ready: (info) =&gt; console.log(info.model, info.sampleRate),
+    speechStart: (info) =&gt; console.log(info.characters, &quot;chars, disclosure&quot;, info.raw.disclosure),
+    audio: (chunk) =&gt; player.write(chunk),   // binary PCM16 or G.711
+    speechEnd: (info) =&gt; console.log(info.audioSeconds, &quot;s,&quot;, info.inferMs, &quot;ms&quot;),
+  },
+  { model: &quot;alania-v2&quot;, encoding: &quot;mulaw&quot;, sampleRate: 8000 },
+);
+
+await socket.speak({ input: &quot;Randevunuz oluşturuldu.&quot; }); // queued until `ready`
+socket.stop();  // `speech_end` + `stopped` arrive, then the server closes
+await socket.closed;
+</code></pre>
+<p><code>speak()</code> accepts the same fields as <code>speech.create()</code> and messages are processed
+one at a time. The connection can set <code>model</code>, <code>encoding</code> (<code>pcm_s16le</code>, <code>mulaw</code>,
+<code>alaw</code>) and <code>sample_rate</code> for every message.</p>
+<h2 id="websocket-stt">WebSocket (STT)</h2>
+<p><code>wss://voice.patientdesk.ai/v1/audio/stream</code> takes raw PCM and emits a <code>final</code>
+transcript shortly after each sentence ends. Auth is <code>?key=</code> (or <code>{ token }</code>).</p>
+<pre><code class="language-ts">const stream = pd.audio.transcribeStream(
+  {
+    ready: (info) =&gt; console.log(&quot;quota&quot;, info.quota),
+    vad: (info) =&gt; (meter.level = info.active ? 1 : 0),
+    partial: (draft) =&gt; console.log(&quot;…&quot;, draft),
+    final: (text, raw) =&gt; console.log(text, raw.start, raw.end, raw.audio_s, raw.rtf),
+    stopped: (info) =&gt; console.log(&quot;billed&quot;, info.audioSeconds),
+    error: (message) =&gt; console.error(message),
+  },
+  { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200 },
+);
+
+stream.sendAudio(pcmChunk); // raw 16-bit PCM, mono
+stream.stop();              // finalizes the open sentence, then the server closes
+await stream.closed;
+</code></pre>
 <table>
 <thead>
 <tr>
-<th>Member</th>
-<th>Type</th>
+<th>Option</th>
+<th>Default</th>
 <th>Notes</th>
 </tr>
 </thead>
 <tbody><tr>
-<td><code>sendAudio(chunk)</code></td>
-<td><code>(Uint8Array) =&gt; void</code></td>
-<td>No-op unless the socket is open.</td>
+<td><code>sampleRate</code></td>
+<td><code>16000</code></td>
+<td>Input rate; the server resamples (8 kHz telephony works).</td>
 </tr>
 <tr>
-<td><code>stop()</code></td>
-<td><code>() =&gt; void</code></td>
-<td>Sends <code>{type:&quot;stop&quot;}</code> then closes with code <code>1000</code>.</td>
+<td><code>eagerFinal</code></td>
+<td><code>true</code></td>
+<td>Finalize without waiting for the silence threshold (~120 ms sooner).</td>
 </tr>
 <tr>
-<td><code>closed</code></td>
-<td><code>Promise&lt;void&gt;</code></td>
-<td>Resolves when the socket closes.</td>
+<td><code>partials</code></td>
+<td>off</td>
+<td>Ask for draft <code>partial</code> events while a sentence is spoken.</td>
+</tr>
+<tr>
+<td><code>partialMs</code></td>
+<td>server</td>
+<td>Draft interval in milliseconds.</td>
+</tr>
+<tr>
+<td><code>token</code></td>
+<td>unset</td>
+<td>Use <code>?token=</code> instead of the API key.</td>
+</tr>
+<tr>
+<td><code>extra</code></td>
+<td>unset</td>
+<td>Merged into the <code>start</code> frame.</td>
 </tr>
 </tbody></table>
-<p><code>stop()</code> tells the server the utterance ended so it can flush a final transcript
-before the socket closes.</p>
+<p>Events: <code>ready</code> (<code>model</code>, <code>quota.remaining_s</code>), <code>vad</code> (<code>prob</code>, <code>active</code>),
+<code>segment_start</code>, <code>partial</code>, <code>segment_end</code>, <code>final</code> (<code>text</code>, <code>start</code>, <code>end</code>,
+<code>audio_s</code>, <code>infer_ms</code>, <code>rtf</code>), <code>stopped</code> (<code>audio_s</code>), <code>error</code>, <code>close</code>.</p>
+<p>With 40–100 ms of audio per binary frame the server has enough to work with.
+<code>examples/stt-live.mjs</code> does exactly that.</p>
 <h2 id="requirements">Requirements</h2>
 <p>Streaming needs a <code>WebSocket</code> implementation. In Node 20 and 21 there is no
 global <code>WebSocket</code>, so inject one. From Node 22 the global exists.</p>
@@ -174,25 +205,14 @@ import { PatientDesk } from &quot;patientdesk-sdk&quot;;
 
 const pd = new PatientDesk({ apiKey, WebSocket });
 </code></pre>
-<p>If no implementation is available, <code>transcribeStream()</code> throws a
+<p>If no implementation is available, <code>transcribeStream()</code> / <code>socket()</code> throws a
 <code>PatientDeskError</code> with code <code>no_websocket</code> before opening anything.</p>
-<h2 id="full-example">Full example</h2>
-<pre><code class="language-ts">const stream = pd.audio.transcribeStream({
-  final: (text) =&gt; transcript.push(text),
-});
-
-// 160 ms of silence-trimmed 16 kHz mono PCM per frame
-for await (const frame of microphoneFrames()) {
-  stream.sendAudio(frame);
-}
-stream.stop();
-await stream.closed;
-console.log(transcript.join(&quot; &quot;));
-</code></pre>
-<h2 id="limits">Limits</h2>
-<p>The endpoint is undocumented, so there is no SLA. Expect the framing, the sample
-rate and the event names to be the moving parts if PatientDesk changes it. Pin a
-version and read <a href="testing.html">Testing</a> to see how the live suite covers it.</p></article>
+<h2 id="known-flakiness">Known flakiness</h2>
+<p>The Websocket handshake is intermittently refused: a fresh socket sometimes
+closes with code <code>1006</code> before the <code>ready</code> frame. Retry two or three times before
+treating it as a client bug, the live suites do exactly that.</p>
+<p>Authentication is passed in the URL for a browser <code>WebSocket</code>, which cannot set
+headers. Treat the URL as a secret and do not log it.</p></article>
         <footer class="doc-footer">
           <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
         </footer>
@@ -200,14 +220,11 @@ version and read <a href="testing.html">Testing</a> to see how the live suite co
         <nav class="toc" aria-label="On this page">
           <p class="toc-title">On this page</p>
           <ul>
-          <li><a href="#a-known-endpoint-change">A known endpoint change</a></li>
-          <li><a href="#opening-a-session">Opening a session</a></li>
-          <li><a href="#handshake">Handshake</a></li>
-          <li><a href="#events">Events</a></li>
-          <li><a href="#the-returned-handle">The returned handle</a></li>
+          <li><a href="#http-streaming-tts">HTTP streaming (TTS)</a></li>
+          <li><a href="#websocket-tts">WebSocket (TTS)</a></li>
+          <li><a href="#websocket-stt">WebSocket (STT)</a></li>
           <li><a href="#requirements">Requirements</a></li>
-          <li><a href="#full-example">Full example</a></li>
-          <li><a href="#limits">Limits</a></li>
+          <li><a href="#known-flakiness">Known flakiness</a></li>
           </ul>
         </nav>
     </div>

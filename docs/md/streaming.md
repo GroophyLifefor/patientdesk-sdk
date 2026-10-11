@@ -1,79 +1,99 @@
 # Streaming
 
-`transcribeStream()` speaks the WebSocket protocol that PatientDesk's own voice
-endpoint uses at `wss://voice.patientdesk.ai/v1/audio/stream`. It is **not** in
-PatientDesk's public documentation, so treat it as experimental. The protocol
-mirrors what the Ömer desktop assistant uses in production.
+Three streaming paths are documented by PatientDesk. The SDK wraps all of them:
 
-This page describes behavior that can change without notice. For a supported
-path, use the REST endpoint in [Speech to text](speech-to-text.md).
+| Path | API | Use when |
+| --- | --- | --- |
+| HTTP TTS | `pd.speech.stream()` | One long text, play as it is generated. |
+| WebSocket TTS | `pd.speech.socket()` | Many sentences over one connection (voice assistants). |
+| WebSocket STT | `pd.audio.transcribeStream()` | Live microphone / phone audio, draft + final transcripts. |
 
-## A known endpoint change
+## HTTP streaming (TTS)
 
-The endpoint once took the key as a `key` query parameter. It now expects a
-`token` query parameter. A `key` connection opens but never sends a `ready`
-frame, and any other parameter name gets `missing_api_key`. The SDK sends
-`token`. If a socket connects and then just sits there, check this first.
+```ts
+for await (const pcm of pd.speech.stream({
+  model: "alania-v2",
+  input: longText,
+  response_format: "pcm", // wav | pcm | mulaw | alaw only
+})) {
+  player.write(pcm);      // 48 kHz mono PCM16 (24 kHz for alania-v1)
+}
+```
 
-Authentication is passed in the URL for a browser `WebSocket`, which cannot set
-headers. Treat the URL as a secret and do not log it.
+- A streamed `wav` response starts with a 44-byte RIFF header whose length fields
+  are `0xFFFFFFFF`, and the helper strips it.
+- Network chunks can split a sample: the helper carries the leftover byte into
+  the next frame.
+- Long text is split at sentence boundaries server-side, with 250 ms of silence
+  between parts.
+- `mp3`, `opus`, `flac` and `aac` cannot stream, those requests return 400.
 
-The handshake is also intermittently refused. A fresh socket sometimes closes
-with code `1006` before the `ready` frame, roughly one attempt in five in our
-observations. Retry the connection a few times before assuming a client bug. The
-[live suite](testing.md) does exactly that.
+`createRaw({ stream: true })` returns the raw `Response` if you want to handle
+the body yourself.
 
-## Opening a session
+## WebSocket (TTS)
+
+`wss://voice.patientdesk.ai/v1/audio/speech/stream` keeps one connection open and
+speaks sentences in order. Auth is `?key=` (or `{ token }` for a session token).
+
+```ts
+const socket = pd.speech.socket(
+  {
+    ready: (info) => console.log(info.model, info.sampleRate),
+    speechStart: (info) => console.log(info.characters, "chars, disclosure", info.raw.disclosure),
+    audio: (chunk) => player.write(chunk),   // binary PCM16 or G.711
+    speechEnd: (info) => console.log(info.audioSeconds, "s,", info.inferMs, "ms"),
+  },
+  { model: "alania-v2", encoding: "mulaw", sampleRate: 8000 },
+);
+
+await socket.speak({ input: "Randevunuz oluşturuldu." }); // queued until `ready`
+socket.stop();  // `speech_end` + `stopped` arrive, then the server closes
+await socket.closed;
+```
+
+`speak()` accepts the same fields as `speech.create()` and messages are processed
+one at a time. The connection can set `model`, `encoding` (`pcm_s16le`, `mulaw`,
+`alaw`) and `sample_rate` for every message.
+
+## WebSocket (STT)
+
+`wss://voice.patientdesk.ai/v1/audio/stream` takes raw PCM and emits a `final`
+transcript shortly after each sentence ends. Auth is `?key=` (or `{ token }`).
 
 ```ts
 const stream = pd.audio.transcribeStream(
   {
-    ready: (info) => console.log("ready", info.model),
-    final: (text) => console.log("final:", text),
+    ready: (info) => console.log("quota", info.quota),
+    vad: (info) => (meter.level = info.active ? 1 : 0),
+    partial: (draft) => console.log("…", draft),
+    final: (text, raw) => console.log(text, raw.start, raw.end, raw.audio_s, raw.rtf),
+    stopped: (info) => console.log("billed", info.audioSeconds),
     error: (message) => console.error(message),
-    close: (code, reason) => console.log("closed", code, reason),
   },
-  { sampleRate: 16000, eagerFinal: true },
+  { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200 },
 );
 
 stream.sendAudio(pcmChunk); // raw 16-bit PCM, mono
-stream.stop();              // sends {type:"stop"} then closes
+stream.stop();              // finalizes the open sentence, then the server closes
 await stream.closed;
 ```
 
-## Handshake
-
-The client opens the socket and sends a JSON `start` frame on `open`:
-
-```json
-{ "type": "start", "sampleRate": 16000, "eager_final": true }
-```
-
-After that it sends raw audio as **binary** frames. Use 16 kHz mono signed
-16-bit little-endian PCM. Extra fields can be merged into the `start` frame with
-`options.extra`.
-
-## Events
-
-| Callback | When | Arguments |
+| Option | Default | Notes |
 | --- | --- | --- |
-| `ready` | Server handshake. | `{ model, raw }` |
-| `final` | Final transcript for an utterance. | `(text, raw)` |
-| `error` | Server error frame, or a socket error. | `(message, raw)` |
-| `close` | Socket closed. | `(code, reason)` |
+| `sampleRate` | `16000` | Input rate; the server resamples (8 kHz telephony works). |
+| `eagerFinal` | `true` | Finalize without waiting for the silence threshold (~120 ms sooner). |
+| `partials` | off | Ask for draft `partial` events while a sentence is spoken. |
+| `partialMs` | server | Draft interval in milliseconds. |
+| `token` | unset | Use `?token=` instead of the API key. |
+| `extra` | unset | Merged into the `start` frame. |
 
-Server frames are JSON: `ready`, `final`, `error`.
+Events: `ready` (`model`, `quota.remaining_s`), `vad` (`prob`, `active`),
+`segment_start`, `partial`, `segment_end`, `final` (`text`, `start`, `end`,
+`audio_s`, `infer_ms`, `rtf`), `stopped` (`audio_s`), `error`, `close`.
 
-## The returned handle
-
-| Member | Type | Notes |
-| --- | --- | --- |
-| `sendAudio(chunk)` | `(Uint8Array) => void` | No-op unless the socket is open. |
-| `stop()` | `() => void` | Sends `{type:"stop"}` then closes with code `1000`. |
-| `closed` | `Promise<void>` | Resolves when the socket closes. |
-
-`stop()` tells the server the utterance ended so it can flush a final transcript
-before the socket closes.
+With 40–100 ms of audio per binary frame the server has enough to work with.
+`examples/stt-live.mjs` does exactly that.
 
 ## Requirements
 
@@ -87,27 +107,14 @@ import { PatientDesk } from "patientdesk-sdk";
 const pd = new PatientDesk({ apiKey, WebSocket });
 ```
 
-If no implementation is available, `transcribeStream()` throws a
+If no implementation is available, `transcribeStream()` / `socket()` throws a
 `PatientDeskError` with code `no_websocket` before opening anything.
 
-## Full example
+## Known flakiness
 
-```ts
-const stream = pd.audio.transcribeStream({
-  final: (text) => transcript.push(text),
-});
+The Websocket handshake is intermittently refused: a fresh socket sometimes
+closes with code `1006` before the `ready` frame. Retry two or three times before
+treating it as a client bug, the live suites do exactly that.
 
-// 160 ms of silence-trimmed 16 kHz mono PCM per frame
-for await (const frame of microphoneFrames()) {
-  stream.sendAudio(frame);
-}
-stream.stop();
-await stream.closed;
-console.log(transcript.join(" "));
-```
-
-## Limits
-
-The endpoint is undocumented, so there is no SLA. Expect the framing, the sample
-rate and the event names to be the moving parts if PatientDesk changes it. Pin a
-version and read [Testing](testing.md) to see how the live suite covers it.
+Authentication is passed in the URL for a browser `WebSocket`, which cannot set
+headers. Treat the URL as a secret and do not log it.

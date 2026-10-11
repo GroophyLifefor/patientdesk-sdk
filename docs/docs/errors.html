@@ -154,11 +154,11 @@ delay, and <code>null</code> otherwise.</p>
 </thead>
 <tbody><tr>
 <td><code>TypeError</code></td>
-<td>Empty <code>input</code>, missing <code>audio</code>, empty audio, wrong audio type.</td>
+<td>Empty <code>input</code>, missing <code>audio</code>, empty audio, wrong audio type, empty <code>reference_audio</code>.</td>
 </tr>
 <tr>
 <td><code>RangeError</code></td>
-<td><code>input</code> over 5,000 characters.</td>
+<td><code>input</code> over 5,000 characters, <code>reference_audio</code> over 10 MB, audio over 100 MB.</td>
 </tr>
 </tbody></table>
 <p>Client construction errors are <code>PatientDeskError</code>:</p>
@@ -183,7 +183,7 @@ delay, and <code>null</code> otherwise.</p>
 </tr>
 <tr>
 <td><code>no_base64</code></td>
-<td>No <code>btoa</code> or <code>Buffer</code> for the STT payload.</td>
+<td>No <code>btoa</code>/<code>Buffer</code> (encode) or <code>atob</code>/<code>Buffer</code> (decode) available.</td>
 </tr>
 </tbody></table>
 <h2 id="retries-and-backoff">Retries and backoff</h2>
@@ -191,6 +191,8 @@ delay, and <code>null</code> otherwise.</p>
 <code>503</code>, <code>504</code>, and on network failures. Everything else <code>4xx</code> is returned at once.</p>
 <ul>
 <li>Default <code>maxRetries</code> is <code>2</code>, so up to 3 attempts.</li>
+<li><code>429 quota_exceeded</code> is <strong>never</strong> retried: waiting will not clear the monthly
+quota. Back off until the quota resets instead.</li>
 <li>When a <code>Retry-After</code> header is present, the wait is capped at 30 seconds.</li>
 <li>Otherwise the delay grows exponentially, base <code>250 ms</code>, capped at <code>4 s</code>, with a
 small jitter.</li>

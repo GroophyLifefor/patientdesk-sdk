@@ -102,22 +102,33 @@ same thing: the decode step failed inside the service.</p>
 persists, it is on PatientDesk&#39;s side. The <code>full-test</code> run reports it as
 <code>PATIENDESK API FAULT while transcribing ...</code> and can be downgraded to skipped
 with <code>PATIENDESK_ALLOW_API_FAULTS=1</code> while the outage lasts.</p>
+<h2 id="stt-returns-an-empty-or-unrelated-transcript">STT returns an empty or unrelated transcript</h2>
+<p>A near-empty or silent file (for example a 44-byte WAV header with no audio) is
+not rejected: the service has been observed answering <code>200</code> with <code>duration: 0</code>
+and hallucinated text. Check <code>duration</code> (and your own silence detection) before
+trusting a transcript. Genuinely undecodable bytes do return
+<code>400 undecodable_audio</code>, which is the correct client error.</p>
 <h2 id="streaming-never-becomes-ready">Streaming never becomes ready</h2>
-<p>The WebSocket endpoint uses a <code>token</code> query parameter, not <code>key</code>. With <code>key</code> the
-socket connects but no <code>ready</code> frame ever arrives. With any other name the
-service answers <code>missing_api_key</code>. This changed over time, so older clients that
-still send <code>key</code> fail silently. See <a href="streaming.html#a-known-endpoint-change">Streaming</a>.</p>
+<p>Both WebSocket sessions authenticate with a query parameter: <code>?key=</code> by default
+(or <code>?token=</code> for a short-lived session token). The SDK sends <code>key</code>, pass
+<code>{ token }</code> to use a token instead. If a socket connects and then just sits
+there, check this first.</p>
 <p>The handshake is also intermittently refused: a fresh socket sometimes closes
 with code <code>1006</code> before <code>ready</code>, roughly one attempt in five. Retry two or three
 times before treating it as a client bug.</p>
 <p>When the connection is ready and you still get no <code>final</code>, check the audio. It
 must be 16 kHz mono signed 16-bit little-endian PCM and contain speech. Silence,
 tones or the wrong framing never produce a transcript.</p>
+<p><code>stop()</code> sends <code>{type:&quot;stop&quot;}</code> and <strong>waits</strong>: the server finalizes the open
+sentence (<code>final</code> + <code>stopped</code>) and then closes. The SDK force-closes after 5
+seconds if that never arrives, so callers cannot hang.</p>
 <h2 id="429-rate-limit"><code>429</code> rate limit</h2>
 <p>The client raises a <code>PatientDeskError</code> with <code>isRateLimit</code> true. Read <code>scope</code> to
 see whether it is a <code>user</code> or <code>pool</code> limit, and <code>resetsAt</code> for the reset time.
 The client already retried twice, honouring <code>Retry-After</code>. Back off until
 <code>resetsAt</code>, then retry.</p>
+<p><code>429 quota_exceeded</code> is not retried, the monthly quota does not clear by
+waiting. The free <code>antalia-mini</code> model has its own limits (<code>429 free_limit_exceeded</code>) and does not consume quota.</p>
 <pre><code class="language-ts">if (err instanceof PatientDeskError &amp;&amp; err.isRateLimit) {
   await sleep(err.resetsAt!.getTime() - Date.now());
 }
@@ -154,6 +165,7 @@ The generated HTML, <code>search-index.json</code>, <code>llms.txt</code>, <code
           <li><a href="#no-websocket-available">No WebSocket available</a></li>
           <li><a href="#input-is-n-characters">input is N characters</a></li>
           <li><a href="#stt-returns-undecodable-audio">STT returns undecodable_audio</a></li>
+          <li><a href="#stt-returns-an-empty-or-unrelated-transcript">STT returns an empty or unrelated transcript</a></li>
           <li><a href="#streaming-never-becomes-ready">Streaming never becomes ready</a></li>
           <li><a href="#429-rate-limit">429 rate limit</a></li>
           <li><a href="#requests-hang">Requests hang</a></li>

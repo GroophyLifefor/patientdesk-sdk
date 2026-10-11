@@ -1,6 +1,10 @@
 import { PatientDeskError, describeBody, parseRetryAfter } from "./errors.js";
 import { AudioApi } from "./stt.js";
 import { SpeechApi } from "./tts.js";
+import { ModelsApi, StylesApi } from "./catalog.js";
+import { PronunciationsApi } from "./pronunciations.js";
+import { VoicesApi } from "./voices.js";
+import type { UsageResponse } from "./types.js";
 
 /** Minimal `WebSocket` surface the streaming STT client needs. */
 export interface WebSocketLike {
@@ -38,15 +42,20 @@ export interface PatientDeskOptions {
 /** The HTTP core shared by the typed APIs. */
 export interface HttpCore {
   readonly baseUrl: string;
+  /** HTTPS origin of the API (no `/v1`), for `/health/...` endpoints. */
+  readonly origin: string;
   readonly wsOrigin: string;
   readonly apiKey: string;
   readonly fetchImpl: typeof fetch;
   readonly wsImpl: WebSocketConstructor | undefined;
   headers(extra?: Record<string, string>): Record<string, string>;
+  /** Authorization + default headers, without a `content-type` (for multipart). */
+  authHeaders(extra?: Record<string, string>): Record<string, string>;
   request(path: string, init?: RequestInit): Promise<Response>;
 }
 
 export const DEFAULT_BASE_URL = "https://voice.patientdesk.ai/v1";
+export const DEFAULT_ORIGIN = "https://voice.patientdesk.ai";
 export const DEFAULT_STATUS_URL = "https://status.patientdesk.ai/api/v2/status.json";
 
 function resolveEnvKey(): string | undefined {
@@ -57,6 +66,14 @@ function resolveEnvKey(): string | undefined {
 function wsOriginOf(baseUrl: string): string {
   const url = new URL(baseUrl);
   url.protocol = url.protocol === "https:" || url.protocol === "wss:" ? "wss:" : "ws:";
+  url.search = "";
+  url.hash = "";
+  return url.origin;
+}
+
+function httpOriginOf(baseUrl: string): string {
+  const url = new URL(baseUrl);
+  url.protocol = url.protocol === "https:" || url.protocol === "wss:" ? "https:" : "http:";
   url.search = "";
   url.hash = "";
   return url.origin;
@@ -97,6 +114,7 @@ export const RETRYABLE_STATUS: ReadonlySet<number> = new Set([408, 409, 425, 429
  */
 export class PatientDesk implements HttpCore {
   readonly baseUrl: string;
+  readonly origin: string;
   readonly wsOrigin: string;
   readonly apiKey: string;
   readonly fetchImpl: typeof fetch;
@@ -109,6 +127,14 @@ export class PatientDesk implements HttpCore {
   readonly speech: SpeechApi;
   /** Speech-to-text (Duyu). */
   readonly audio: AudioApi;
+  /** Saved voices: list, create, delete (`/v1/voices`). */
+  readonly voices: VoicesApi;
+  /** Saved pronunciation dictionary (`/v1/pronunciations`). */
+  readonly pronunciations: PronunciationsApi;
+  /** Ready-made conversation styles (`GET /v1/styles`). */
+  readonly styles: StylesApi;
+  /** Model catalog (`GET /v1/alania/models`). */
+  readonly models: ModelsApi;
 
   constructor(options: PatientDeskOptions = {}) {
     const key = options.apiKey ?? resolveEnvKey();
@@ -128,6 +154,7 @@ export class PatientDesk implements HttpCore {
 
     this.apiKey = key;
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+    this.origin = httpOriginOf(this.baseUrl);
     this.wsOrigin = wsOriginOf(this.baseUrl);
     this.fetchImpl = fetchImpl;
     this.wsImpl = options.WebSocket ?? (globalThis.WebSocket as unknown as WebSocketConstructor | undefined);
@@ -137,6 +164,10 @@ export class PatientDesk implements HttpCore {
 
     this.speech = new SpeechApi(this);
     this.audio = new AudioApi(this);
+    this.voices = new VoicesApi(this);
+    this.pronunciations = new PronunciationsApi(this);
+    this.styles = new StylesApi(this);
+    this.models = new ModelsApi(this);
   }
 
   /** Authorization + content headers for a JSON request. */
@@ -147,6 +178,21 @@ export class PatientDesk implements HttpCore {
       ...this.defaultHeaders,
       ...extra,
     };
+  }
+
+  /** Authorization + default headers with no `content-type` (multipart bodies set their own). */
+  authHeaders(extra?: Record<string, string>): Record<string, string> {
+    return {
+      authorization: `Bearer ${this.apiKey}`,
+      ...this.defaultHeaders,
+      ...extra,
+    };
+  }
+
+  /** `GET /v1/alania/usage` — quota usage for the account. */
+  async usage(): Promise<UsageResponse> {
+    const response = await this.request("/alania/usage", { method: "GET", headers: this.headers() });
+    return (await response.json()) as UsageResponse;
   }
 
   /**
@@ -181,7 +227,9 @@ export class PatientDesk implements HttpCore {
         if (response.ok) return response;
 
         const retryAfter = parseRetryAfter(response.headers.get("retry-after"));
-        const retryable = retryAfter !== undefined || RETRYABLE_STATUS.has(response.status);
+        // `quota_exceeded` will not clear by waiting; never retry it.
+        const quotaExceeded = response.status === 429 && (await errorCodeOf(response)) === "quota_exceeded";
+        const retryable = !quotaExceeded && (retryAfter !== undefined || RETRYABLE_STATUS.has(response.status));
         if (!retryable || attempt === this.maxRetries) {
           throw await this.toError(response, retryAfter);
         }
@@ -224,5 +272,15 @@ export class PatientDesk implements HttpCore {
       body,
       retryAfterSeconds: retryAfter,
     });
+  }
+}
+
+/** Read `error.code` from a response without consuming its body. */
+async function errorCodeOf(response: Response): Promise<string | undefined> {
+  try {
+    const body = (await response.clone().json()) as { error?: { code?: unknown } };
+    return typeof body?.error?.code === "string" ? body.error.code : undefined;
+  } catch {
+    return undefined;
   }
 }

@@ -99,14 +99,22 @@ proves it against the real service and names the faulty side when it breaks.</p>
 <code>fetch</code> and a local WebSocket double, so it is deterministic and offline. It
 covers:</p>
 <ul>
-<li>the client: auth headers, retries, backoff, timeouts and abort signals</li>
-<li>TTS: body building, format mapping, <code>createRaw</code>, input validation</li>
-<li>STT: base64 encoding, every <code>response_format</code>, format detection</li>
-<li>streaming: the <code>start</code> frame, binary sends, <code>final</code> handling, <code>stop()</code></li>
+<li>the client: auth headers, retries, backoff, timeouts, abort signals and
+<code>quota_exceeded</code> (never retried)</li>
+<li>TTS: body building, Alania-2 fields, per-model default voices, WAV-header
+stripping while streaming, the WebSocket socket, input validation</li>
+<li>STT: multipart uploads, every <code>response_format</code>, granularity fields, the
+100 MB limit</li>
+<li>streaming: <code>start</code> frames, every event (<code>partial</code>, <code>vad</code>, <code>segment_*</code>,
+<code>final</code>, <code>stopped</code>), graceful <code>stop()</code></li>
+<li>account/catalog: voices, pronunciations, styles, models, usage, <code>/health/alania</code></li>
 <li>errors: parsing, rate-limit fields, <code>resetsAt</code></li>
 <li>status: indicators and descriptions</li>
 <li>down behavior: what happens when the service answers with an outage</li>
+<li>docwatch: sitemap filtering, article extraction, path mapping and unified diffs</li>
 </ul>
+<p>Line coverage of the built ESM bundle is 100% (<code>node --test --experimental-test-coverage</code> in <code>test/unit</code>). The CJS build is smoke-tested end
+to end. The live suite closes the gap against the real service.</p>
 <h2 id="preflight">Preflight</h2>
 <p><code>npm run full-test</code> runs <code>scripts/preflight.mjs</code> before any live call. It:</p>
 <ol>
@@ -142,15 +150,19 @@ faults to skipped. They are still printed, never hidden:</p>
 <h2 id="fixtures">Fixtures</h2>
 <p>Test fixtures under <code>test/fixtures/</code> are real Turkish speech generated with
 Alania, converted with <code>ffmpeg</code> into <code>wav</code>, <code>m4a</code>, <code>mp3</code>, <code>ogg</code>, <code>webm</code>, <code>flac</code>
-and 16 kHz raw PCM, plus a deliberately truncated WAV for the decode-error path.</p>
+and 16 kHz raw PCM, plus a truncated clip that still decodes (the
+upload-corruption path).</p>
 <pre class="shell-block"><code><span class="sh-cli">npm</span> <span class="sh-cmd">run</span> <span class="sh-arg">fixtures</span>
 </code></pre>
 <p>The script uses <code>PATIENDESK_API_KEY</code> when it is set. Without a key it writes a
 synthetic tone so the offline layout is still complete, and it says so.</p>
 <h2 id="live-suites">Live suites</h2>
-<p>The live tests under <code>test/live/</code> cover TTS, STT over REST, and the WebSocket
-stream. They read the <code>.live-enabled</code> flag, so running them directly without
-preflight skips rather than fails.</p>
+<p>The live tests under <code>test/live/</code> cover TTS (including <code>alania-v2</code>, styles and
+the free <code>antalia-mini</code>), the TTS WebSocket, STT over multipart REST, the STT
+WebSocket stream, and the read-only catalog endpoints (<code>/v1/voices</code>,
+<code>/v1/styles</code>, <code>/v1/alania/models</code>, usage, <code>/health/alania</code>). They read the
+<code>.live-enabled</code> flag, so running them directly without preflight skips rather
+than fails.</p>
 <h2 id="adding-a-test">Adding a test</h2>
 <p>Put offline tests in <code>test/unit</code> and import the built package from <code>dist</code>. Put
 live tests in <code>test/live</code> and wrap the body with <code>guard(t, context, fn)</code> from

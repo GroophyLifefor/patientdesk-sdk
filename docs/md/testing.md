@@ -15,13 +15,23 @@ Builds the package, then runs every file under `test/unit`. It injects a mock
 `fetch` and a local WebSocket double, so it is deterministic and offline. It
 covers:
 
-- the client: auth headers, retries, backoff, timeouts and abort signals
-- TTS: body building, format mapping, `createRaw`, input validation
-- STT: base64 encoding, every `response_format`, format detection
-- streaming: the `start` frame, binary sends, `final` handling, `stop()`
+- the client: auth headers, retries, backoff, timeouts, abort signals and
+  `quota_exceeded` (never retried)
+- TTS: body building, Alania-2 fields, per-model default voices, WAV-header
+  stripping while streaming, the WebSocket socket, input validation
+- STT: multipart uploads, every `response_format`, granularity fields, the
+  100 MB limit
+- streaming: `start` frames, every event (`partial`, `vad`, `segment_*`,
+  `final`, `stopped`), graceful `stop()`
+- account/catalog: voices, pronunciations, styles, models, usage, `/health/alania`
 - errors: parsing, rate-limit fields, `resetsAt`
 - status: indicators and descriptions
 - down behavior: what happens when the service answers with an outage
+- docwatch: sitemap filtering, article extraction, path mapping and unified diffs
+
+Line coverage of the built ESM bundle is 100% (`node --test
+--experimental-test-coverage` in `test/unit`). The CJS build is smoke-tested end
+to end. The live suite closes the gap against the real service.
 
 ## Preflight
 
@@ -68,7 +78,8 @@ PATIENDESK_ALLOW_API_FAULTS=1 npm run full-test
 
 Test fixtures under `test/fixtures/` are real Turkish speech generated with
 Alania, converted with `ffmpeg` into `wav`, `m4a`, `mp3`, `ogg`, `webm`, `flac`
-and 16 kHz raw PCM, plus a deliberately truncated WAV for the decode-error path.
+and 16 kHz raw PCM, plus a truncated clip that still decodes (the
+upload-corruption path).
 
 ```sh
 npm run fixtures
@@ -79,9 +90,12 @@ synthetic tone so the offline layout is still complete, and it says so.
 
 ## Live suites
 
-The live tests under `test/live/` cover TTS, STT over REST, and the WebSocket
-stream. They read the `.live-enabled` flag, so running them directly without
-preflight skips rather than fails.
+The live tests under `test/live/` cover TTS (including `alania-v2`, styles and
+the free `antalia-mini`), the TTS WebSocket, STT over multipart REST, the STT
+WebSocket stream, and the read-only catalog endpoints (`/v1/voices`,
+`/v1/styles`, `/v1/alania/models`, usage, `/health/alania`). They read the
+`.live-enabled` flag, so running them directly without preflight skips rather
+than fails.
 
 ## Adding a test
 

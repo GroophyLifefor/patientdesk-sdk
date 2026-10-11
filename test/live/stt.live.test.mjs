@@ -64,10 +64,23 @@ test("live: verbose_json returns word timings", { skip: skip || (wav ? false : "
   assert.ok(result.words[0].end >= result.words[0].start);
 });
 
-test("live: genuinely undecodable audio is rejected with 400", { skip: skip || (truncated ? false : "missing tr-sample-truncated.wav") }, async (t) => {
-  await guard(t, "rejecting a header-only WAV", () =>
-    assert.rejects(() => client.audio.transcribe({ audio: truncated, audio_format: "wav" }), (err) => {
-      assert.equal(err.status, 400, "a header-only WAV must be a client error");
+test("live: a truncated speech clip still transcribes", { skip: skip || (truncated ? false : "missing tr-sample-truncated.wav") }, async (t) => {
+  // A file cut mid-stream is a realistic upload corruption. The service decodes
+  // whatever is there, so the SDK must return a normal 200 transcript.
+  const result = await guard(t, "transcribing a truncated clip", () =>
+    client.audio.transcribe({ audio: truncated, audio_format: "wav", language: "tr" }),
+  );
+  if (!result) return;
+  assert.equal(typeof result.text, "string");
+});
+
+test("live: genuinely undecodable audio is rejected with 400 undecodable_audio", { skip }, async (t) => {
+  // Deterministic garbage: not a container any decoder accepts.
+  const garbage = new Uint8Array(2048).map((_v, i) => (i * 37) % 251);
+  await guard(t, "rejecting undecodable bytes", () =>
+    assert.rejects(() => client.audio.transcribe({ audio: garbage, audio_format: "wav" }), (err) => {
+      assert.equal(err.status, 400, "undecodable bytes must be a client error");
+      assert.equal(err.code, "undecodable_audio");
       return true;
     }),
   );

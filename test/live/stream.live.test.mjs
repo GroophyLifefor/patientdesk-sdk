@@ -19,7 +19,7 @@ function loadPcm() {
   }
 }
 
-// The WebSocket endpoint is undocumented and its handshake is intermittently
+// Duyu's live stream is documented, but the handshake is still intermittently
 // refused (socket closes with code 1006 before a ready frame). `connectStream`
 // retries a few times so a flaky handshake does not read as a broken client.
 //
@@ -70,8 +70,8 @@ test("live: streaming STT reaches a ready state", { skip }, async (t) => {
 
   if (outcome !== "ready") {
     // Never blame the client when the socket refuses to hand a ready frame:
-    // the endpoint is undocumented and its auth/API changes without notice.
-    // Only "unreachable" after retries is treated as a client-side problem.
+    // the service closes the handshake intermittently. Only "unreachable"
+    // after retries is treated as a client-side problem.
     const err = new Error(
       `streaming handshake not ready after ${attempts} attempts (${outcome}) events=${JSON.stringify(events)}`,
     );

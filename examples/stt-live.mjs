@@ -1,12 +1,12 @@
-// Live transcription from the microphone over the WebSocket stream.
+// Live transcription from the microphone over the documented WebSocket stream.
 // No npm dependencies. Node 22+ has a global WebSocket, older versions need one.
 //
 //   node examples/stt-live.mjs 8
 //   node examples/stt-live.mjs --device "Microphone (USB Audio)"
 //
-// Streams 16 kHz mono PCM from ffmpeg to Duyu and prints final transcripts.
-// The endpoint is undocumented, so treat this as experimental.
-// Requires PATIENDESK_API_KEY and Node 22+ (or a WebSocket implementation).
+// Streams 16 kHz mono PCM from ffmpeg to Duyu, shows draft transcripts and
+// prints final ones. Requires PATIENDESK_API_KEY and Node 22+ (or a WebSocket
+// implementation).
 
 import { PatientDesk } from "patientdesk-sdk";
 import { requireApiKey, requireFfmpeg, streamMicPcm } from "./audio.mjs";
@@ -28,14 +28,15 @@ const finals = [];
 const stream = pd.audio.transcribeStream(
   {
     ready: (info) => console.log(`[stt-live] ready (${info.model ?? "duyu"})`),
-    final: (text) => {
+    partial: (draft) => process.stdout.write(`\r[stt-live] … ${draft}          `),
+    final: (text, raw) => {
       finals.push(text);
-      console.log(`[stt-live] final: ${text}`);
+      process.stdout.write(`\r[stt-live] final (${raw.audio_s?.toFixed?.(2) ?? "?"}s): ${text}\n`);
     },
     error: (message) => console.error(`[stt-live] error: ${message}`),
     close: (code, reason) => console.log(`[stt-live] closed ${code} ${reason}`),
   },
-  { sampleRate: 16000, eagerFinal: true },
+  { sampleRate: 16000, eagerFinal: true, partials: true },
 );
 
 const mic = streamMicPcm((chunk) => stream.sendAudio(chunk), device);
