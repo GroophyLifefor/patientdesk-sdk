@@ -125,6 +125,9 @@ const { text } = await pd.audio.transcribe({
 });
 console.log(text);
 </code></pre>
+<p>Alania can return <code>wav</code>, <code>mp3</code>, <code>opus</code>, <code>flac</code>, <code>aac</code>, <code>pcm</code>, <code>mulaw</code> or <code>alaw</code>
+with <code>response_format</code>. For low-latency playback read <a href="streaming.html">Streaming</a>.
+For microphone capture and live captions read <a href="recipes.html">Node.js recipes</a>.</p>
 <h2 id="4-health-check-no-key">4. Health check (no key)</h2>
 <pre><code class="language-ts">import { fetchStatus, fetchAlaniaHealth, isOperational, statusDescription } from &quot;patientdesk-sdk&quot;;
 

@@ -10,6 +10,9 @@
 > Not affiliated with, endorsed by, or supported by PatientDesk. It is an
 > independent client for their public, OpenAI-compatible API.
 
+Full guides and the API reference live at
+[groophylifefor.github.io/patientdesk-sdk](https://groophylifefor.github.io/patientdesk-sdk/).
+
 Zero runtime dependencies. Works on Node 20+, Deno, Bun and edge runtimes
 (uses the global `fetch`, `FormData`, `Blob` and `WebSocket`; all can be injected).
 
@@ -32,7 +35,7 @@ const speech = await pd.speech.create({
   model: "alania-v2",
   voice: "alania2-f1",
   input: "Randevunuz oluşturuldu.",
-  response_format: "wav",
+  response_format: "wav", // wav | mp3 | opus | flac | aac | pcm | mulaw | alaw
 });
 const wav = new Uint8Array(await speech.arrayBuffer());
 console.log(speech.model, speech.characters, speech.audioSeconds);
@@ -162,6 +165,9 @@ await stream.closed;
 
 Auth uses `?key=`; pass `{ token }` for a short-lived session token instead.
 
+For microphone capture see `examples/stt-mic.mjs` (record, then transcribe) and
+`examples/stt-live.mjs` (live drafts and finals over the stream).
+
 ## Account and catalog
 
 ```ts
@@ -277,6 +283,8 @@ required under **Settings → Secrets and variables → Actions**.
 PatientDesk'in **resmî olmayan** Türkçe ses SDK'sı: **Alania** (metinden sese)
 ve **Duyu** (sesten metne, multipart REST + dokümante WebSocket akışı). Sıfır
 çalışma zamanı bağımlılığı; Node 20+, Deno, Bun.
+
+Dokümanlar: [groophylifefor.github.io/patientdesk-sdk](https://groophylifefor.github.io/patientdesk-sdk/)
 
 ```ts
 const pd = new PatientDesk({ apiKey: process.env.PATIENDESK_API_KEY });

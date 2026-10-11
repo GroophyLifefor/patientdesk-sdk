@@ -77,6 +77,10 @@ const { text } = await pd.audio.transcribe({
 console.log(text);
 ```
 
+Alania can return `wav`, `mp3`, `opus`, `flac`, `aac`, `pcm`, `mulaw` or `alaw`
+with `response_format`. For low-latency playback read [Streaming](streaming.md).
+For microphone capture and live captions read [Node.js recipes](recipes.md).
+
 ## 4. Health check (no key)
 
 ```ts
