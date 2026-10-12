@@ -44,11 +44,6 @@ jobs:
           # from the default branch so fixes to the watcher take effect at once.
           git show origin/main:scripts/docwatch.mjs > scripts/docwatch.mjs
 
-      - name: "Debug: which language the runner sees (temporary)"
-        run: |
-          curl -sL -o /tmp/probe.html -w "probe final=%{url_effective} status=%{http_code}\n" "https://speech.patientdesk.ai/tr/docs/alania"
-          echo "probe tr=$(grep -c 'genel bakış' /tmp/probe.html || true) en=$(grep -c 'overview' /tmp/probe.html || true)"
-
       - name: Check the docs against the snapshots
         id: drift
         run: |
@@ -71,6 +66,14 @@ jobs:
             echo "changed=$changed" >> "$GITHUB_OUTPUT"
             git diff --cached --stat -- upstream-docs
           fi
+
+      - name: Upload the full report
+        if: steps.drift.outputs.drift == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-drift-report
+          path: drift-report.md
+          retention-days: 30
 
       - name: Open or update the docs-drift issue
         if: steps.drift.outputs.drift == 'true' && steps.drift.outputs.bootstrap != 'true'
@@ -95,14 +98,6 @@ jobs:
               --assignee GroophyLifefor \
               --body-file drift-report.md
           fi
-
-      - name: Upload the full report
-        if: steps.drift.outputs.drift == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: docs-drift-report
-          path: drift-report.md
-          retention-days: 30
 
       - name: Advance the baseline snapshots
         if: steps.drift.outputs.drift == 'true'

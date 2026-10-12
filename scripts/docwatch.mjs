@@ -350,7 +350,7 @@ function walkSnapshotPages(out, langs) {
 
 // ------------------------------------------------------------------ report ----
 
-function formatReport({ base, changes, maxDiffLines, generatedAt }) {
+export function formatReport({ base, changes, maxDiffLines, generatedAt, maxChars = 60_000 }) {
   const header = [
     `# Doküman değişiklik raporu`,
     ``,
@@ -364,17 +364,24 @@ function formatReport({ base, changes, maxDiffLines, generatedAt }) {
     table.push(`| ${change.key} | ${change.label} | ${amount} |`);
   }
   const body = [];
+  let used = 0;
+  let truncated = false;
   for (const change of changes) {
-    body.push(`### ${change.key}`);
-    body.push(``);
-    body.push(`[${change.url}](${change.url})`);
-    body.push(``);
-    body.push("```diff");
+    const section = [`### ${change.key}`, ``, `[${change.url}](${change.url})`, ``];
     const diff = formatDiff(change, maxDiffLines);
-    body.push(diff.text || "(özet fark üretilemedi)");
-    if (diff.truncated) body.push(`… (kısaltıldı; tam fark snapshot commit'inde)`);
-    body.push("```");
-    body.push(``);
+    section.push("```diff", diff.text || "(özet fark üretilemedi)");
+    if (diff.truncated) section.push(`… (kısaltıldı; tam fark snapshot commit'inde)`);
+    section.push("```", "");
+    const sectionChars = section.reduce((sum, line) => sum + line.length + 1, 0);
+    if (used + sectionChars > maxChars) {
+      truncated = true;
+      break;
+    }
+    used += sectionChars;
+    body.push(...section);
+  }
+  if (truncated) {
+    body.push(`… (rapor boyutu sınırına ulaşıldı. Kalan sayfalar burada listelenmedi; tam rapor workflow artifact'ında.)`, "");
   }
   return [...header, "## Özet", "", ...table, "", "## Değişiklikler", "", ...body].join("\n");
 }

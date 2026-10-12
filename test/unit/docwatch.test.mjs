@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   extractArticle,
+  formatReport,
   pageKey,
   pageListFromSitemap,
   snapshotPath,
@@ -129,4 +130,26 @@ test("unifiedDiff is empty for identical text and honours the line cap", () => {
   const capped = unifiedDiff("", many, { maxLines: 5 });
   assert.equal(capped.truncated, true);
   assert.equal(capped.text.split("\n").length, 5);
+});
+
+test("formatReport caps the issue-sized report and notes the truncation", () => {
+  const big = Array.from({ length: 200 }, (_, i) => `satır ${i}`).join("\n") + "\n";
+  const changes = Array.from({ length: 100 }, (_, i) => ({
+    key: `tr/docs/p${i}`,
+    url: "https://example.test",
+    status: "added",
+    label: "yeni",
+    oldText: "",
+    newText: big,
+    diff: unifiedDiff("", big),
+  }));
+  const report = formatReport({
+    base: "https://example.test",
+    changes,
+    maxDiffLines: 200,
+    generatedAt: "now",
+    maxChars: 10_000,
+  });
+  assert.ok(report.length <= 10_200, `report is ${report.length} chars`);
+  assert.match(report, /rapor boyutu sınırına ulaşıldı/);
 });
