@@ -363,6 +363,9 @@ export function formatReport({ base, changes, maxDiffLines, generatedAt, maxChar
     const amount = change.status === "added" ? `+${change.diff.added}` : change.status === "removed" ? `−${change.diff.removed}` : `+${change.diff.added} −${change.diff.removed}`;
     table.push(`| ${change.key} | ${change.label} | ${amount} |`);
   }
+  const intro = [...header, "## Özet", "", ...table, "", "## Değişiklikler", ""];
+  const introChars = intro.reduce((sum, line) => sum + line.length + 1, 0);
+  const budget = Math.max(1_000, maxChars - introChars - 400);
   const body = [];
   let used = 0;
   let truncated = false;
@@ -373,7 +376,7 @@ export function formatReport({ base, changes, maxDiffLines, generatedAt, maxChar
     if (diff.truncated) section.push(`… (kısaltıldı; tam fark snapshot commit'inde)`);
     section.push("```", "");
     const sectionChars = section.reduce((sum, line) => sum + line.length + 1, 0);
-    if (used + sectionChars > maxChars) {
+    if (used + sectionChars > budget) {
       truncated = true;
       break;
     }
@@ -383,7 +386,7 @@ export function formatReport({ base, changes, maxDiffLines, generatedAt, maxChar
   if (truncated) {
     body.push(`… (rapor boyutu sınırına ulaşıldı. Kalan sayfalar burada listelenmedi; tam rapor workflow artifact'ında.)`, "");
   }
-  return [...header, "## Özet", "", ...table, "", "## Değişiklikler", "", ...body].join("\n");
+  return [...intro, ...body].join("\n");
 }
 
 function formatDiff(change, maxDiffLines) {
