@@ -38,6 +38,17 @@ jobs:
             git checkout -B upstream-docs
           fi
 
+      - name: Use the current watcher script
+        run: |
+          # The snapshot branch only carries snapshots. Always run the script
+          # from the default branch so fixes to the watcher take effect at once.
+          git show origin/main:scripts/docwatch.mjs > scripts/docwatch.mjs
+
+      - name: Debug: which language the runner sees (temporary)
+        run: |
+          curl -sL -o /tmp/probe.html -w "probe final=%{url_effective} status=%{http_code}\n" "https://speech.patientdesk.ai/tr/docs/alania"
+          echo "probe tr=$(grep -c 'genel bakış' /tmp/probe.html || true) en=$(grep -c 'overview' /tmp/probe.html || true)"
+
       - name: Check the docs against the snapshots
         id: drift
         run: |
