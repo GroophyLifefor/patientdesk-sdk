@@ -1,12 +1,12 @@
-# A phone line with Twilio
-Answer a call, transcribe the caller live with Duyu and reply in Alania's voice. Audio stays 8 kHz μ-law both ways; nothing to resample.
-## How it fits together
-- Twilio answers the call and sends the caller's audio to your server over a Media Stream WebSocket: 20 ms frames of base64 8 kHz μ-law.
-- Your server turns μ-law into PCM16 and sends it to Duyu's live stream with sampleRate: 8000.
-- Duyu sends a final when a sentence ends. You decide what to say back: rules, an LLM, or both.
-- The reply goes to an Alania WebSocket opened with ?encoding=mulaw as a speak. Every binary message that comes back is already 8 kHz μ-law and goes straight back to Twilio.
+# Twilio ile telefon hattı
+Bir aramayı açın, arayanı Duyu ile canlı yazıya dökün ve Alania’nın sesiyle yanıt verin. Ses iki yönde de 8 kHz μ-law kalır; yeniden örnekleme yok.
+## Nasıl çalışır
+- Twilio aramayı açar ve arayanın sesini bir Media Stream WebSocket’iyle sunucunuza gönderir: 20 ms’lik, base64 kodlu 8 kHz μ-law parçalar.
+- Sunucunuz μ-law’ı PCM16’ya çevirir ve Duyu’nun canlı akışına sampleRate: 8000 ile gönderir.
+- Duyu bir cümle bittiğinde final gönderir. Ne yanıt verileceğine siz karar verirsiniz: kurallar, bir LLM ya da ikisi.
+- Yanıt, ?encoding=mulaw ile açılmış Alania WebSocket’ine speak olarak gider. Gelen her ikili mesaj zaten 8 kHz μ-law’dır ve doğrudan Twilio’ya geri gönderilir.
 ## TwiML
-Return this TwiML from your Twilio number's incoming-call webhook. url is the public WSS address of the bridge below.
+Twilio numaranızın gelen arama ayarında bu TwiML’i döndürün. url, aşağıdaki köprünün herkese açık WSS adresidir.
 XML
 <?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -14,8 +14,8 @@ XML
 <Stream url="wss://your-server.example.com/twilio" />
 </Connect>
 </Response>
-## The bridge
-Each call opens two connections and keeps them for the whole call: one to Duyu (listening) and one to Alania (speaking). answer() is your agent.
+## Köprü
+Her arama iki bağlantı açar ve görüşme boyunca açık tutar: biri Duyu’ya (dinlemek), biri Alania’ya (konuşmak). answer() sizin ajanınızdır.
 bridge.js
 // bridge.js — npm install ws
 import { WebSocketServer, WebSocket } from "ws";
@@ -85,11 +85,11 @@ if (duyu.readyState === WebSocket.OPEN) duyu.send(JSON.stringify({ type: "stop" 
 if (alania.readyState === WebSocket.OPEN) alania.send(JSON.stringify({ type: "stop" }));
 });
 });
-- Barge-in. When the caller talks over Alania, Duyu sends segment_start. The bridge sends Twilio a clear to drop buffered audio and discards the rest of that reply.
-- Order. Alania handles speak messages one at a time, in order. Messages sent before the connection is ready wait in a queue.
-- Chunk size. Twilio sends 20 ms; the bridge forwards 60 ms at a time (Duyu expects 40–100 ms chunks).
-## Latency
-Step | Time | Knob |
-End of sentence | ~500 ms of silence | eager_final: true moves it about 120 ms earlier (on in the bridge). |
-Your agent | up to you | Stream the LLM reply and send each sentence as its own speak. |
-First audio | ~190 ms | The μ-law conversion runs on the server and adds nothing. |
+- Söz kesme. Arayan, Alania konuşurken söze girerse Duyu segment_start gönderir. Köprü Twilio’ya clear gönderip tampondaki sesi durdurur ve bir sonraki yanıta kadar kalan sesi atar.
+- Sıra. Alania speak mesajlarını sırayla, birer birer işler. Bağlantı ready göndermeden gelen mesajlar kuyrukta bekler.
+- Parça boyu. Twilio 20 ms gönderir; köprü 60 ms biriktirip öyle iletir (Duyu 40–100 ms’lik parçalar bekler).
+## Gecikme
+Adım | Süre | Ayar |
+Cümle sonu | ~500 ms sessizlik | eager_final: true yaklaşık 120 ms öne alır (köprüde açık). |
+Sizin ajanınız | size bağlı | LLM yanıtını cümle cümle akıtıp her cümleyi ayrı speak olarak gönderin. |
+İlk ses | ~190 ms | μ-law dönüşümü sunucuda yapılır, süre eklemez. |

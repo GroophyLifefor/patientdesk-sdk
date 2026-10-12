@@ -1,18 +1,18 @@
-# Output formats
-Same call, different response_format: plain text for dictation, word timestamps for archives, subtitles for video.
-response_format | Content | Content-Type |
-json | text only. | application/json |
-text | Plain text with a trailing newline. | text/plain |
-verbose_json | text, language, duration, segments[], and words[] on request. | application/json |
-srt | SubRip subtitles. | text/plain |
-vtt | WebVTT subtitles. | text/vtt |
+# Çıktı biçimleri
+Aynı çağrı, farklı response_format: dikte için düz metin, arşiv için sözcük zamanları, video için altyazı.
+response_format | İçerik | Content-Type |
+json | Yalnızca text. | application/json |
+text | Düz metin, sonunda satır sonu. | text/plain |
+verbose_json | text, language, duration, segments[], istenirse words[]. | application/json |
+srt | SubRip altyazı. | text/plain |
+vtt | WebVTT altyazı. | text/vtt |
 ## verbose_json
 segments[]object[]
-id, start, end, text. Sentence-level timing.
+id, start, end, text. Cümle düzeyinde zamanlar.
 words[]object[]
-word, start, end, probability. With timestamp_granularities[]=word.
+word, start, end, probability. timestamp_granularities[]=word ile.
 durationnumber
-Audio length in seconds. This is the billed duration.
+Ses süresi, saniye. Faturalanan süre budur.
 verbose_json
 curl https://voice.patientdesk.ai/v1/audio/transcriptions \
 -H "Authorization: Bearer pd_live_..." \
@@ -25,8 +25,8 @@ curl https://voice.patientdesk.ai/v1/audio/transcriptions \
 "segments": [{ "id": 0, "start": 0.0, "end": 4.2, "text": "Merhaba, ben Ayşe Yılmaz." }, ...],
 "words": [{ "word": "Merhaba,", "start": 0.0, "end": 0.6, "probability": 0.98 }, ...]
 }
-## Subtitles
-Subtitle cues follow segment boundaries and are wrapped to at most 42 characters and 2 lines.
+## Altyazı
+Altyazı satırları segment sınırlarını izler; en fazla 42 karakter ve 2 satır olacak biçimde bölünür.
 srt
 1
 00:00:00,420 --> 00:00:03,100

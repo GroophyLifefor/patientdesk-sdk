@@ -1,11 +1,11 @@
-# Speech in a web app
-Keep your key on the server: a small route forwards the request to Alania and streams the audio back, and the browser starts playing on the first chunk.
-- Add a /api/speak route on your server. It forwards the request to Alania with stream: true and passes the response straight back.
-- In the browser, speak(text) reads the WAV header, then queues each PCM chunk with Web Audio.
-- Wire it to a button. The first audio arrives about 190 ms after the request (depending on your network).
-## 1 · The server route
-The key lives in the PATIENTDESK_API_KEY environment variable and never reaches the browser. The route passes the response through without buffering it, so audio reaches the browser while the rest of the sentence is still being made.
-Server
+# Web uygulamasında ses
+Anahtarınız sunucuda kalsın: küçük bir uç nokta isteği Alania’ya iletir ve sesi akış hâlinde geri verir; tarayıcı ilk parçayla çalmaya başlar.
+- Sunucunuzda /api/speak adında bir uç nokta açın. İsteği stream: true ile Alania’ya iletir ve yanıtı olduğu gibi geri akıtır.
+- Tarayıcıda speak(text) gelen WAV başlığını okur, ardından her PCM parçasını Web Audio ile sıraya koyar.
+- Bir butona bağlayın. İlk ses, istek gönderildikten yaklaşık 190 ms sonra gelir (ağınıza göre değişir).
+## 1 · Sunucu uç noktası
+Anahtar PATIENTDESK_API_KEY ortam değişkeninde durur ve tarayıcıya hiç gitmez. Uç nokta yanıtı tamponlamadan geçirir; bu yüzden ses, cümlenin geri kalanı üretilirken tarayıcıya ulaşır.
+Sunucu
 // app/api/speak/route.ts — the API key stays on the server
 export async function POST(req: Request) {
 const { text, voice = "alania2-f1" } = await req.json();
@@ -25,8 +25,8 @@ return new Response(upstream.body, {
 headers: { "Content-Type": upstream.headers.get("content-type") ?? "audio/wav" },
 });
 }
-## 2 · Playing in the browser
-The response starts with a 44-byte WAV header; the sample rate is at byte 24 (48,000 on Alania-2). After that it is raw PCM16. Network chunks can split a sample, so a leftover byte is carried over to the next chunk.
+## 2 · Tarayıcıda çalmak
+Yanıt 44 baytlık bir WAV başlığıyla başlar; örnekleme hızı başlığın 24. baytındadır (Alania-2’de 48.000). Sonrası ham PCM16’dır. Ağ parçaları bir örneği ortadan bölebilir, bu yüzden tek kalan bayt bir sonraki parçaya taşınır.
 speak.js
 // speak.js — call it from a click: browsers only start audio after a user gesture.
 export async function speak(text) {
@@ -70,8 +70,8 @@ c.set(a);
 c.set(b, a.length);
 return c;
 };
-## 3 · Wiring a button
-Browsers only play audio after a user gesture, so start speak from a click.
+## 3 · Bir butona bağlamak
+Tarayıcılar sesi ancak bir kullanıcı etkileşiminden sonra çalar; speak çağrısını bir tıklamadan başlatın.
 React
 import { speak } from "./speak";
 export function ListenButton() {
@@ -81,8 +81,8 @@ Dinle
 </button>
 );
 }
-## In production
-- If you speak the same sentences again and again (greetings, menus), render them with a seed and cache the file: the same seed, text and settings give the same audio.
-- Use the pronunciation dictionary for brand and person names; your route does not change.
-- If a voice agent says many sentences in a row, one WebSocket connection from your server is more efficient.
-- Tell listeners the audio is AI-generated; every response carries x-disclosure: ai-generated.
+## Üretimde
+- Aynı cümleleri tekrar tekrar seslendiriyorsanız (karşılama, menü), seed ile üretip dosyayı önbelleğe alın: aynı seed, metin ve ayarlar aynı sesi verir.
+- Marka ve kişi adları için söyleniş sözlüğünü kullanın; uç noktanıza dokunmanız gerekmez.
+- Bir sesli asistan çok sayıda cümleyi arka arkaya söylüyorsa sunucudan tek bir WebSocket bağlantısı kullanmak daha verimlidir.
+- Dinleyicilere sesin yapay zekâyla üretildiğini belirtin; her yanıt x-disclosure: ai-generated başlığını taşır.

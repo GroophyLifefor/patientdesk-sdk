@@ -1,8 +1,8 @@
-Docs
-# Build with Turkish speech
-Two Turkish speech models, one API key. Alania turns text into speech; Duyu turns speech into text. Both work with the OpenAI client libraries: change base_url and you are done.
-QuickstartParameters reference
-First request
+Dokümantasyon
+# Türkçe sesle geliştirin
+İki Türkçe ses modeli, tek API anahtarı. Alania metni sese, Duyu sesi metne çevirir. İkisi de OpenAI istemcileriyle çalışır: base_url değiştirmek yeterli.
+Hızlı başlangıçParametre referansı
+İlk istek
 curl https://voice.patientdesk.ai/v1/audio/speech \
 -H "Authorization: Bearer pd_live_..." \
 -H "Content-Type: application/json" \
@@ -10,36 +10,36 @@ curl https://voice.patientdesk.ai/v1/audio/speech \
 "voice": "alania2-f1",
 "input": "Talebinizi ilgili ekibe aktardım, sonucu size kısa mesajla ileteceğiz." }' \
 --output talep.wav
-Result: talep.wav
+Sonuç: talep.wav
 -
-## Products
-Guides and reference for each product.
-Text to speech
+## Ürünler
+Her ürünün rehberleri ve referansı.
+Metinden sese
 Alania
-Built-in voices, style instructions, voice design from a description, consented cloning. 48 kHz audio that streams as it is made.
-- Overview and voices
-- Style instructionsPreview
-- Voice designPreview
-- Voice cloningBeta
-- Professional cloneBeta
-- Pronunciation dictionary
-- Streaming
-- Parameters reference
-- Migrating from Alania-1
-Speech to text
+Yerleşik sesler, üslup talimatı, tarifle ses tasarımı, izinli klonlama. 48 kHz, üretildikçe akar.
+- Genel bakış ve sesler
+- Konuşma üslubuÖnizleme
+- Ses tasarımıÖnizleme
+- Ses klonlamaBeta
+- Profesyonel klonBeta
+- Söyleniş sözlüğü
+- Akış
+- Parametre referansı
+- Alania-1’den geçiş
+Sesten metne
 Duyu
-File transcription and live streaming. Compatible with OpenAI Whisper clients; word timestamps, SRT and VTT.
-- Transcription
-- Live streaming
-- Output formats
-## Models
-The ids you put in model.
-alania-v2DefaultText to speech. Built-in voices, style, design, cloning.48 kHzantalia-miniFreeThe open-source Antalia-2 Mini. One voice, no quota used.48 kHzalania-v1LegacyThe first Alania. One voice, no extra fields.24 kHzduyu-1STTSpeech to text: files and live streams.REST · WebSocket
-## Examples
-End-to-end projects you can copy and run.
-Speech in a web appKeep your key on the server: a small route forwards the request to Alania and streams the audio back, and the browser starts playing on the first chunk.A phone line with TwilioAnswer a call, transcribe the caller live with Duyu and reply in Alania's voice. Audio stays 8 kHz μ-law both ways; nothing to resample.Live captions in the browserStream the microphone to Duyu and show the words as they are spoken: partial drafts while someone talks, a settled final line when they pause.Narrating a long textTurn an article or a book chapter into one audio file: split the text into 5,000-character parts, ask for raw PCM, and write a single WAV.Subtitles for a videoPull the audio track out with ffmpeg, ask Duyu for srt, and attach the subtitles to the video.
-## Base URLs
-Every request goes over HTTPS or WSS; errors come back as JSON in the OpenAI shape.
+Dosya transkripsiyonu ve canlı akış. OpenAI Whisper istemcileriyle uyumlu; sözcük zamanları, SRT ve VTT.
+- Transkripsiyon
+- Canlı akış
+- Çıktı biçimleri
+## Modeller
+model alanına yazdığınız kimlikler.
+alania-v2VarsayılanMetinden sese. Yerleşik sesler, üslup, tasarım, klonlama.48 kHzantalia-miniÜcretsizAçık kaynak Antalia-2 Mini. Tek ses, kotadan düşmez.48 kHzalania-v1Eski sürümİlk Alania. Tek ses, ek alan yok.24 kHzduyu-1STTSesten metne: dosya ve canlı akış.REST · WebSocket
+## Örnekler
+Kopyalayıp çalıştırabileceğiniz uçtan uca projeler.
+Web uygulamasında sesAnahtarınız sunucuda kalsın: küçük bir uç nokta isteği Alania’ya iletir ve sesi akış hâlinde geri verir; tarayıcı ilk parçayla çalmaya başlar.Twilio ile telefon hattıBir aramayı açın, arayanı Duyu ile canlı yazıya dökün ve Alania’nın sesiyle yanıt verin. Ses iki yönde de 8 kHz μ-law kalır; yeniden örnekleme yok.Tarayıcıda canlı altyazıMikrofonu Duyu’ya akıtın ve sözcükleri söylendikçe gösterin: konuşurken partial taslaklar, durunca kesinleşmiş bir final satırı.Uzun bir metni seslendirmekBir makaleyi ya da kitap bölümünü tek bir ses dosyasına çevirin: metni 5.000 karakterlik parçalara bölün, ham PCM isteyin ve tek bir WAV yazın.Videoya altyazıSes kanalını ffmpeg ile çıkarın, Duyu’dan srt isteyin ve altyazıyı videoya ekleyin.
+## Temel adresler
+Tüm istekler HTTPS ya da WSS üzerinden gider; hatalar OpenAI biçimindeki JSON ile döner.
 Alania · REST
 POSThttps://voice.patientdesk.ai/v1/audio/speech
 Alania · WebSocket
@@ -48,8 +48,8 @@ Duyu · REST
 POSThttps://voice.patientdesk.ai/v1/audio/transcriptions
 Duyu · WebSocket
 WSSwss://voice.patientdesk.ai/v1/audio/stream
-## Reference
-- AuthenticationEvery request carries a key from your dashboard. The same key works for Alania and Duyu. Browser connections use short-lived tokens instead.
-- Parameters referenceEvery field of the POST /v1/audio/speech body, with its default and range. Send JSON or multipart/form-data.
-- Errors and limitsErrors follow the OpenAI shape: error.message, error.type, error.code. Temporary errors come with a Retry-After header.
-- Service statusLive status, 90-day uptime and incident history.
+## Referans
+- Kimlik doğrulamaHer istek panelden aldığınız anahtarı taşır. Aynı anahtar Alania’da ve Duyu’da geçerlidir. Tarayıcıdan açılan bağlantılar için kısa ömürlü tokenlar vardır.
+- Parametre referansıPOST /v1/audio/speech gövdesindeki her alan, varsayılanı ve aralığıyla. JSON ya da multipart/form-data gönderebilirsiniz.
+- Hatalar ve sınırlarHatalar OpenAI biçimindedir: error.message, error.type, error.code. Geçici hatalar Retry-After başlığıyla gelir.
+- Servis durumuCanlı durum, 90 günlük erişilebilirlik, olay geçmişi.

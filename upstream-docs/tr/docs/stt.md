@@ -1,29 +1,29 @@
-# Transcription
-Send an audio file, get the text. Same contract as OpenAI audio/transcriptions; your existing Whisper client works unchanged.
-POSThttps://voice.patientdesk.ai/v1/audio/transcriptions Try it
+# Transkripsiyon
+Bir ses dosyası gönderin, metni alın. OpenAI audio/transcriptions ile aynı sözleşme; mevcut Whisper istemciniz olduğu gibi çalışır.
+POSThttps://voice.patientdesk.ai/v1/audio/transcriptions Deneyin
 curl https://voice.patientdesk.ai/v1/audio/transcriptions \
 -H "Authorization: Bearer pd_live_..." \
 -F file=@kayit.m4a \
 -F response_format=json
-## Form fields
-Send multipart/form-data. wav, mp3, m4a, webm, ogg and flac are accepted. Files longer than 30 s are split and re-joined automatically.
-filefilerequired
-The audio file. Up to 100 MB and 2 hours.
+## Form alanları
+multipart/form-data gönderin. wav, mp3, m4a, webm, ogg ve flac kabul edilir. 30 saniyeden uzun dosyalar otomatik olarak bölünür ve birleştirilir.
+filefilezorunlu
+Ses dosyası. En fazla 100 MB ve 2 saat.
 modelstring
-duyu-1. whisper-1 is accepted for compatibility.
-Defaultduyu-1
+duyu-1. Uyumluluk için whisper-1 de kabul edilir.
+Varsayılanduyu-1
 language"tr" | "auto"
-The language spoken.
-Defaulttr
+Konuşmanın dili.
+Varsayılantr
 promptstring
-Spelling and vocabulary hint: drug names, person names, ID numbers. The model prefers these spellings.
+Yazım ve terim ipucu: ilaç adları, kişi adları, kimlik numaraları. Model bu yazımları tercih eder.
 response_formatstring
-json, text, verbose_json, srt, vtt. See Output formats.
-Defaultjson
+json, text, verbose_json, srt, vtt. Bkz. Çıktı biçimleri.
+Varsayılanjson
 timestamp_granularities[]string[]
-segment and/or word; only with verbose_json.
+segment ve/veya word; yalnızca verbose_json ile.
 temperaturenumber
 0–1.
-Default0
-## Response
+Varsayılan0
+## Yanıt
 { "text": "Merhaba, ben Ayşe Yılmaz. Sipariş numaram CNB123." }

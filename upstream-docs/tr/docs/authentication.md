@@ -1,14 +1,14 @@
-# Authentication
-Every request carries a key from your dashboard. The same key works for Alania and Duyu. Browser connections use short-lived tokens instead.
-## API keys
-Keys start with pd_live_ and go in the Authorization: Bearer header. X-Api-Key is accepted too. Keep keys on the server; never ship them in client code.
+# Kimlik doğrulama
+Her istek panelden aldığınız anahtarı taşır. Aynı anahtar Alania’da ve Duyu’da geçerlidir. Tarayıcıdan açılan bağlantılar için kısa ömürlü tokenlar vardır.
+## API anahtarları
+Anahtarlar pd_live_ ile başlar ve Authorization: Bearer başlığında gönderilir. X-Api-Key başlığı da kabul edilir. Anahtarı sunucu tarafında tutun; istemci koduna asla gömmeyin.
 Authorization: Bearer pd_live_...
 # or
 X-Api-Key: pd_live_...
-## WebSocket connections
-Browser WebSockets can't set headers, so pass the key or token as a ?key= or ?token= query parameter. Use the header when you connect from a server.
-## Session tokens
-Instead of handing the browser a key, mint a 10-minute JWT on your own server (HS256, signed with the SESSION_JWT_SECRET shared with you). The dashboard playground does exactly this.
+## WebSocket bağlantıları
+Tarayıcıdaki WebSocket başlık gönderemez; anahtar ya da token ?key= veya ?token= sorgu parametresiyle verilir. Sunucudan bağlanırken başlığı kullanın.
+## Oturum tokenları
+Tarayıcıya anahtar vermek yerine kendi sunucunuzda 10 dakikalık bir JWT üretin (HS256, sizinle paylaşılan SESSION_JWT_SECRET ile imzalanır). Paneldeki deneme alanı tam olarak bunu yapar.
 Node
 import { SignJWT } from "jose";
 const secret = new TextEncoder().encode(process.env.SESSION_JWT_SECRET);

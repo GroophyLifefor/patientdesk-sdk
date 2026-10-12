@@ -1,6 +1,6 @@
-# Live streaming
-Send raw PCM from a microphone or phone line; each utterance arrives as a final shortly after silence.
-WSSwss://voice.patientdesk.ai/v1/audio/stream Try it
+# Canlı akış
+Mikrofondan ya da telefon hattından ham PCM gönderin; her cümle sessizlikten kısa süre sonra final olarak gelir.
+WSSwss://voice.patientdesk.ai/v1/audio/stream Deneyin
 WebSocket
 const ws = new WebSocket("wss://voice.patientdesk.ai/v1/audio/stream?key=pd_live_...");
 ws.onopen = () => ws.send(JSON.stringify({ type: "start", sampleRate: 48000 }));
@@ -10,28 +10,28 @@ const m = JSON.parse(e.data);
 if (m.type === "final") console.log(m.start, m.end, m.text);
 };
 // when done: ws.send(JSON.stringify({ type: "stop" }))
-## Protocol
-- Open the connection and send {"type":"start","sampleRate":16000}. Optional: partials: true, partial_ms, eager_final: true.
-- Send a raw Int16 PCM chunk every 40–100 ms (binary message). The server resamples; the 8 kHz telephone band is supported.
-- Read events as JSON. When done, send {"type":"stop"}; the open utterance closes as a final and stopped follows.
-## Events
+## Protokol
+- Bağlantıyı açın ve {"type":"start","sampleRate":16000} gönderin. İsteğe bağlı: partials: true, partial_ms, eager_final: true.
+- Her 40–100 ms’de bir ham Int16 PCM parçası gönderin (ikili mesaj). Sunucu yeniden örnekler; 8 kHz telefon bandı desteklenir.
+- Olayları JSON olarak okuyun. Bitirince {"type":"stop"} gönderin; açık cümle final olarak kapanır ve ardından stopped gelir.
+## Olaylar
 readyevent
-model, quota.remaining_s. The connection is ready.
+model, quota.remaining_s. Bağlantı hazır.
 vadevent
-prob, active. About every 100 ms, and immediately when active flips. Use it for a level meter.
+prob, active. Yaklaşık her 100 ms’de bir; active değişince hemen. Ses seviyesi göstergesi için kullanın.
 segment_startevent
-Speech started (start).
+Konuşma başladı (start).
 partialevent
-Draft of the utterance in progress; only with partials: true, every partial_ms.
+Süren cümlenin taslağı; yalnızca partials: true ile, partial_ms aralıklarla.
 segment_endevent
-Speech ended (end). A final follows.
+Konuşma bitti (end). Ardından final gelir.
 finalevent
-text, start, end, audio_s, infer_ms, rtf. The definitive text of the utterance.
+text, start, end, audio_s, infer_ms, rtf. Cümlenin kesin metni.
 stoppedevent
-All utterances decoded; audio_s is the billed duration.
+Tüm cümleler çözüldü; audio_s faturalanan süredir.
 errorevent
 message, code.
-Example event stream
+Örnek olay akışı
 {"type":"ready","model":"duyu-1","quota":{"remaining_s":7130}}
 {"type":"vad","prob":0.91,"active":true}
 {"type":"segment_start","start":0.42}
@@ -40,5 +40,5 @@ Example event stream
 {"type":"segment_end","end":3.10}
 {"type":"final","text":"Yarın saat on dörtteki randevumu on altıya alabilir miyiz?","start":0.42,"end":3.10,"audio_s":2.68,"infer_ms":118,"rtf":0.04}
 {"type":"stopped","audio_s":2.68}
-## Turn taking
-A final arrives after 500 ms of silence. With eager_final: true the model may commit the utterance before the silence threshold, moving a voice agent's reply about 120 ms earlier. No external VAD is needed: vad and segment_* events come from the model itself.
+## Sıra alma
+final, 500 ms sessizlikten sonra gelir. eager_final: true ile model, sessizlik eşiğini beklemeden cümleyi kesinleştirebilir; sesli asistanlarda yanıtı yaklaşık 120 ms öne alır. Harici bir VAD gerekmez: vad ve segment_* olayları modelin kendisinden gelir.

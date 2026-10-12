@@ -1,111 +1,111 @@
 {
   "source": "https://speech.patientdesk.ai",
-  "fetchedAt": "2026-10-12T08:04:45.027Z",
+  "fetchedAt": "2026-10-12T08:11:41.575Z",
   "pages": {
     "tr/docs": {
       "url": "https://speech.patientdesk.ai/docs",
-      "sha256": "59cc929d823127c8a986341e25d3d4e8bbc57ab8643f85d0bbd4e0df57a1e04c",
-      "bytes": 3183
+      "sha256": "334ffe41bd3185e511e36d23f8b760996d4afcb6b7efa415c3ffe8ea51e89cc2",
+      "bytes": 3351
     },
     "tr/docs/alania": {
       "url": "https://speech.patientdesk.ai/docs/alania",
-      "sha256": "16b6186570bbc966972b74b5cba516f5856320cd3e700d4d292cafa4857e7473",
-      "bytes": 5085
+      "sha256": "ea2630c0ec6cd64070d11589d57da7c83871878f62a901fd4d345e2cfb2ca676",
+      "bytes": 5222
     },
     "tr/docs/alania/cloning": {
       "url": "https://speech.patientdesk.ai/docs/alania/cloning",
-      "sha256": "e0a3d878ef2ca322db4492ffaefdf9871fa38bf2a012bc524656998fc6f22c73",
-      "bytes": 7568
+      "sha256": "e8567822ab2c0680fe3a5e9f2bbb2d645b65992ac17b6223f0f76684b0a511e8",
+      "bytes": 7721
     },
     "tr/docs/alania/instructions": {
       "url": "https://speech.patientdesk.ai/docs/alania/instructions",
-      "sha256": "3a4c7598b1e2d7c3a1c4dafdce93c18d739c5133363721251c71c303ce4e00cb",
-      "bytes": 5814
+      "sha256": "eee4c898573c94a1d131c5bf2690bcd01651c130a2f0c5e45e3c025a84c81db2",
+      "bytes": 5885
     },
     "tr/docs/alania/migrate": {
       "url": "https://speech.patientdesk.ai/docs/alania/migrate",
-      "sha256": "5ea019b88b6fdf492d90eed65752cab437c1a18f4f9fc158e732474417672925",
-      "bytes": 1471
+      "sha256": "1d6e87d650f8411290a6b656f0f1ada05ea97114aa005b4a9a0699e74de73d89",
+      "bytes": 1595
     },
     "tr/docs/alania/parameters": {
       "url": "https://speech.patientdesk.ai/docs/alania/parameters",
-      "sha256": "3ce865f22a1ba75081f4de113521869b9c822491935dcca0a69bfad0257c0b5a",
-      "bytes": 5886
+      "sha256": "759c509bb0e62bf23798c4df091604bf1fe641ebf92970f11c91b31cf9ed3cfa",
+      "bytes": 6274
     },
     "tr/docs/alania/professional-clone": {
       "url": "https://speech.patientdesk.ai/docs/alania/professional-clone",
-      "sha256": "1a16fe20fd0c4f215e5721f4b3687171568c307c3db7b81885f9b4756157b386",
-      "bytes": 6610
+      "sha256": "4ab9ba0d42c56ee6002b098d9f6cdcd795499ce0c19e1f0193e7ee4946cfcd12",
+      "bytes": 6573
     },
     "tr/docs/alania/pronunciation": {
       "url": "https://speech.patientdesk.ai/docs/alania/pronunciation",
-      "sha256": "383e2ccf0fa1faa32cd16f6dbf4f739d2fa6db3b414fda81ad5089cb31df165f",
-      "bytes": 5283
+      "sha256": "e072dfe82ce2d96d1fe62abbc72e7bffbb673d3f15646e7142dff63a23037929",
+      "bytes": 5582
     },
     "tr/docs/alania/streaming": {
       "url": "https://speech.patientdesk.ai/docs/alania/streaming",
-      "sha256": "ea0b81c18dfa5d625cdcea45a3db51825cc4743246049719e7ac17cbfa2930a2",
-      "bytes": 6093
+      "sha256": "b93da10a7bae56f24938ee458cabb8f95444712751df60abff15b3a42cd9ce2a",
+      "bytes": 6391
     },
     "tr/docs/alania/voice-design": {
       "url": "https://speech.patientdesk.ai/docs/alania/voice-design",
-      "sha256": "52cdd3d23f44841994af0775087364066338a0ce47225dcb0b05d8bfd01b3561",
-      "bytes": 4417
+      "sha256": "b1f221a54b948da4a712977e16608a60024fb9f8c7a172c73c7c8ee5ec2ea6d5",
+      "bytes": 4441
     },
     "tr/docs/authentication": {
       "url": "https://speech.patientdesk.ai/docs/authentication",
-      "sha256": "4054bc0bbc81c02ae91cf44c6fe5e6f19b0c9572e7ae2ab85f5d7b978ff26bc1",
-      "bytes": 1128
+      "sha256": "09b732c7df475bd8d2e75943cb7d8247a0fb6320629a5d6957bf3e4f95bbd5b5",
+      "bytes": 1249
     },
     "tr/docs/errors": {
       "url": "https://speech.patientdesk.ai/docs/errors",
-      "sha256": "3c29229e4cc93edb2a655fd170cb59a0878ee242d35059a41e99d307e37f6a93",
-      "bytes": 6330
+      "sha256": "f748830f155a9c8d565f4968e01a3f37fea8ea5e881d4e7c02668d4cbebd27f2",
+      "bytes": 6482
     },
     "tr/docs/examples/live-captions": {
       "url": "https://speech.patientdesk.ai/docs/examples/live-captions",
-      "sha256": "5d34b86b2f4c99182e5965986117d6afe704fce8acc69483f8e51ad78f197334",
-      "bytes": 4148
+      "sha256": "d8da297654f0b6ee3482e1e523214e56d3f84c81c3db1aecf8d88386b747004a",
+      "bytes": 4284
     },
     "tr/docs/examples/narration": {
       "url": "https://speech.patientdesk.ai/docs/examples/narration",
-      "sha256": "a0fea6d65fed1bacc4e61eb6b0224c7d30407c3b739d803f3545f93770daaa18",
-      "bytes": 2580
+      "sha256": "8f0eac7eada3a1b491bcebe92bb228be776a51b3fa341e5a0d9cf51991259c61",
+      "bytes": 2739
     },
     "tr/docs/examples/phone-agent": {
       "url": "https://speech.patientdesk.ai/docs/examples/phone-agent",
-      "sha256": "7bafa75d348469bccdc469bf079f76e71736864844ed8b3888d21ad147992d30",
-      "bytes": 4599
+      "sha256": "2242c47aebca1f9d04d4888fdf2a2c480a0784625e2fc987b3045157fb7d5003",
+      "bytes": 4758
     },
     "tr/docs/examples/subtitles": {
       "url": "https://speech.patientdesk.ai/docs/examples/subtitles",
-      "sha256": "98e33cb55c889494c94e6afa6c80e5df3bb8756706b34b7b6aec7eb9c7a08192",
-      "bytes": 1603
+      "sha256": "2e52286f5707c69f6e9fa88754d7813ac1b46a02f59088a70311d71e1683424c",
+      "bytes": 1713
     },
     "tr/docs/examples/web-app": {
       "url": "https://speech.patientdesk.ai/docs/examples/web-app",
-      "sha256": "cee82d3e1d1acffde4fd97a370eb86fb6497ea20ee98a0286b444ef76afeb951",
-      "bytes": 4200
+      "sha256": "bae80ab3b18557e71c25020f6f6fd923df791d1ee4dbab43b5d7c976b6ac4634",
+      "bytes": 4377
     },
     "tr/docs/quickstart": {
       "url": "https://speech.patientdesk.ai/docs/quickstart",
-      "sha256": "4508ee1c28f83898377224d31204fd982b472fb289cff246ffeb343eb4757749",
-      "bytes": 2464
+      "sha256": "f8f36e82dbc4d68f9d19b24aa4909c30c8419f8470851a9dd150f2e32a8c66db",
+      "bytes": 2543
     },
     "tr/docs/stt": {
       "url": "https://speech.patientdesk.ai/docs/stt",
-      "sha256": "10ec3d8d4ce630030a7f9a42dab9ab5b1f78cbbeb21750c6e586d4da46b0cd4a",
-      "bytes": 1088
+      "sha256": "ae776a724f6fde44f8231c034857040b3242e395d54dbe10a49abf4a8a9d7045",
+      "bytes": 1152
     },
     "tr/docs/stt/formats": {
       "url": "https://speech.patientdesk.ai/docs/stt/formats",
-      "sha256": "0cd6c2e00b6926bea1ef11a0cbb0b47b2f8631b4007d63040b4b1904470defe8",
-      "bytes": 1461
+      "sha256": "0b83d54a53a7402a2bb0284ce69b453c6188a70479c9a852e934be58199ad1c9",
+      "bytes": 1482
     },
     "tr/docs/stt/streaming": {
       "url": "https://speech.patientdesk.ai/docs/stt/streaming",
-      "sha256": "e1e7c6ef2acd93231136a73e0871592555c9cbd2eb04dabdb5667d9245ba03ac",
-      "bytes": 2283
+      "sha256": "a23ee744c337e1b66d4d9fece6a5931da6fcaf71d5f93995a746a47f8fb8fd8f",
+      "bytes": 2361
     },
     "en/docs": {
       "url": "https://speech.patientdesk.ai/en/docs",

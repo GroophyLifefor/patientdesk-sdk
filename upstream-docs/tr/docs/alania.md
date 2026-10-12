@@ -1,36 +1,36 @@
-# Alania: overview
-Alania reads Turkish text aloud. Alania-2 is the default model: two built-in voices, short instructions for how to speak, new voices from a description or a recording, and 48 kHz audio.
-POSThttps://voice.patientdesk.ai/v1/audio/speech Try it
-The body is the same as OpenAI audio/speech, so your OpenAI client works once you change base_url. Alania-2's extra fields go in the same body. See the parameters reference for every field.
+# Alania: genel bakış
+Alania Türkçe metni sese çevirir. Alania-2 varsayılan modeldir: iki yerleşik ses, nasıl konuşacağını söyleyen kısa talimatlar, tarifle ya da kayıttan yeni sesler ve 48 kHz ses.
+POSThttps://voice.patientdesk.ai/v1/audio/speech Deneyin
+Gövde OpenAI audio/speech ile aynıdır; mevcut OpenAI istemciniz base_url değiştirilerek çalışır. Alania-2’nin ek alanları aynı gövdeye eklenir. Tüm alanlar için parametre referansına bakın.
 curl https://voice.patientdesk.ai/v1/audio/speech \
 -H "Authorization: Bearer pd_live_..." \
 -H "Content-Type: application/json" \
 -d '{ "model": "alania-v2", "input": "Merhaba, randevunuz onaylandı.", "voice": "alania2-f1" }' \
 --output merhaba.wav # audio/wav, 48 kHz mono
-## Four ways to choose a voice
-Way | Fields | Details |
-Built-in voice | voice | One of the voices below. The same timbre on every request. |
-Style instructions (preview) | voice + instructions, or a ready style | Style instructions: slowly, calmly, whispering… or ready styles for call centers. |
-Voice design (preview) | voice_description | Voice design: a new voice described in words; save one you like and use it by its id. |
-Voice cloning (beta) | reference_audio + consent, or voice set to a saved voice's id | Voice cloning: from a 3–30 second recording (20–30 is best) you have permission to use, sent with each request or saved once and used by its id. |
-The price is the same for all four: per character of input.
-## Voices
-voice | Voice | Note |
-alania2-f1 | Female | Alania-2's default voice. |
-alania2-m1 | Male | |
-alania2-m2 | Male, deep | Beta. |
-alania2-f2 | Female, bright | Beta. |
-alania | Male · Alania-1 | Only with model: "alania-v1". Its id is alania-v1. |
-antalia-mini | Male · Antalia-2 Mini | The free model. With model: "antalia-mini", or with this voice and no model. |
-The beta voices are built-in voices trained on recordings from speakers who gave their consent, chosen with voice like the others. Each chunk is listened to before it is sent and made again when a word is missing (except a stream's first chunk, which plays as it is made). They may still miss a word slightly more often than the two main voices. GET /v1/voices marks them with "beta": true.
+## Ses seçmenin dört yolu
+Yol | Alanlar | Ayrıntı |
+Yerleşik ses | voice | Aşağıdaki seslerden biri. Her istekte aynı tını. |
+Üslup talimatı (önizleme) | voice + instructions ya da hazır style | Konuşma üslubu: yavaş, sakin, fısıltıyla… ya da çağrı merkezi için hazır stiller. |
+Ses tasarımı (önizleme) | voice_description | Ses tasarımı: sözle tarif edilen yeni bir ses; beğendiğinizi kaydedip kimliğiyle kullanabilirsiniz. |
+Ses klonlama (beta) | reference_audio + consent ya da kayıtlı sesin kimliğiyle voice | Ses klonlama: 3–30 saniyelik (en iyisi 20–30) izinli bir kayıttan, her istekte ya da bir kez kaydedip kimliğiyle. |
+Fiyat dört yolda da aynıdır: input alanındaki karakter başına.
+## Sesler
+voice | Ses | Not |
+alania2-f1 | Kadın | Alania-2’nin varsayılan sesi. |
+alania2-m1 | Erkek | |
+alania2-m2 | Erkek, kalın | Beta. |
+alania2-f2 | Kadın, parlak | Beta. |
+alania | Erkek · Alania-1 | Yalnızca model: "alania-v1" ile. Kimliği alania-v1. |
+antalia-mini | Erkek · Antalia-2 Mini | Ücretsiz model. model: "antalia-mini" ile ya da model belirtmeden bu sesle. |
+Beta sesler, izin veren konuşmacıların kayıtlarıyla eğitilmiş yerleşik seslerdir ve diğerleri gibi voice ile seçilir. Her parça gönderilmeden önce dinlenir; eksik kelimeli bir okuma yeniden üretilir (akışta ilk parça hariç, o üretilirken çalınır). Yine de iki ana sesten biraz daha sık kelime kaçırabilirler. GET /v1/voices yanıtında "beta": true ile işaretlidirler.
 GEThttps://voice.patientdesk.ai/v1/voices
-The list holds the built-in voices and the voices saved to your account (kind: "custom"; source is "clone" or "design"); see Saved voices. A designed voice is listed once you save it; recordings sent with a request are not saved or listed.
-Hear the voices
+Liste yerleşik sesleri ve hesabınıza kaydettiğiniz sesleri (kind: "custom"; source değeri "clone" ya da "design") içerir; bkz. Kaydedilmiş sesler. Tasarlanan bir ses kaydedildiğinde listelenir; istekle gönderilen kayıtlar kaydedilmez, listelenmez.
+Sesleri dinleyin
 -
 -
 -
 -
-Response
+Yanıt
 {
 "object": "list",
 "data": [
@@ -57,10 +57,10 @@ Response
 …
 ]
 }
-## Models
+## Modeller
 GEThttps://voice.patientdesk.ai/v1/alania/models
-One host serves both products, so the endpoints that exist on both carry /alania on the speech side: /v1/alania/models, /v1/alania/usage, /health/alania. The audio endpoints and /v1/voices stay as they are.
-Response
+Aynı alan adı iki ürüne de hizmet verdiği için, iki tarafta da bulunan uç noktalar Alania tarafında /alania ile adlandırılır: /v1/alania/models, /v1/alania/usage, /health/alania. Ses uç noktaları ve /v1/voices olduğu gibi kalır.
+Yanıt
 {
 "object": "list",
 "data": [
@@ -72,8 +72,8 @@ Response
 "default": false, "legacy": false, "free": true, "sample_rate": 48000, "status": "ok" }
 ]
 }
-## Response
-Every response carries x-disclosure: ai-generated. Telling your listeners that the audio is AI-generated is your responsibility. All headers are in the parameters reference.
+## Yanıt
+Her yanıt x-disclosure: ai-generated başlığını taşır. Sesin yapay zekâyla üretildiğini dinleyicilerinize belirtmek sizin sorumluluğunuzdadır. Tüm başlıklar parametre referansında.
 HTTP
 HTTP/1.1 200 OK
 content-type: audio/wav
@@ -85,8 +85,8 @@ x-characters: 45
 x-audio-seconds: 3.18
 x-queue-wait-ms: 0
 <RIFF header, then PCM16 48 kHz mono>
-## Measurements
-Measure | Value | Conditions |
-First audio | ~190 ms | Streamed request to first audio chunk, median, measured through the public API with the network included. |
-Character error rate · alania2-f1 | 2.7% | Our 292-sentence Turkish test set; the audio was transcribed with Whisper. |
-Character error rate · alania2-m1 | 2.8% | Same test set and method. |
+## Ölçümler
+Ölçüm | Değer | Koşullar |
+İlk ses | ~190 ms | Akışlı istekten ilk ses parçasına, ortanca; genel API üzerinden, ağ süresi dahil ölçüldü. |
+Karakter hata oranı · alania2-f1 | %2,7 | 292 cümlelik Türkçe test setimiz; üretilen ses Whisper ile yazıya döküldü. |
+Karakter hata oranı · alania2-m1 | %2,8 | Aynı test seti ve yöntem. |

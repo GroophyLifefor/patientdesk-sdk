@@ -1,6 +1,6 @@
-# Style instructionsPreview
-Tell a built-in voice how to speak with one short sentence in instructions. The voice stays the same; the delivery changes.
-In the Python and Node OpenAI SDKs, instructions is a regular argument; nothing extra is needed.
+# Konuşma üslubuÖnizleme
+instructions alanıyla yerleşik sese nasıl konuşacağını kısa bir cümleyle söyleyin. Ses aynı kalır, söyleyiş değişir.
+Python ve Node OpenAI SDK’larında instructions doğrudan bir argümandır; ek bir ayar gerekmez.
 curl https://voice.patientdesk.ai/v1/audio/speech \
 -H "Authorization: Bearer pd_live_..." \
 -H "Content-Type: application/json" \
@@ -9,36 +9,36 @@ curl https://voice.patientdesk.ai/v1/audio/speech \
 "voice": "alania2-f1",
 "instructions": "speaking slowly and calmly" }' \
 --output randevu.wav
-With an instruction
+Talimatla okunan örnekler
 -
 -
-## Writing instructions
-- Describe the delivery: pace, loudness, pitch, emotion. The instruction is turned into an English description of the delivery in the form the model was trained on (“A woman speaks calmly, a little slower than usual…”); roles and stories (“like a calm nurse”, “as if telling a secret”) are reduced to the delivery alone.
-- You can write in Turkish. An instruction in any language becomes that English description before it reaches the model. The text stays Turkish.
-- Be concrete: pace, loudness, emotion, setting.
-- At most 200 characters. No parentheses.
-- If a result begins with the instruction read aloud, it is generated again. In a stream (stream: true or the WebSocket), the opening seconds of an instruction longer than 40 characters are held back until they have been heard and checked, which adds about 0.4 seconds to the first audio. Short instructions start at once.
-Example instruction | When |
-Whisper. | Quiet settings, night-time notices |
-speak like a calm nurse | Patient calls, test results |
-speaking slowly and calmly | Appointment reminders, directions |
-cheerful and upbeat | Greetings |
-in a serious, formal tone | Formal announcements |
-## Ready styles
-Ready styles we chose by measurement for call centers: instead of writing an instruction, send one's id in style. Each maps to a description of the delivery that the model was trained on word for word; it is never translated or rewritten, and it never holds back the start of a stream.
-style | When |
-support-warm | Everyday customer service: warm and friendly. |
-support-calm | Complaints, waits, bad news: calm and reassuring. |
-sales-energetic | Campaigns and offers: lively and upbeat. |
-reception-smile | Greetings and bookings: bright and welcoming. |
-apologetic | Delays, mistakes, apologies: sincere and sorry. |
-empathetic | Patient calls, difficult news: gentle and understanding. |
-slow | Older callers, numbers, addresses: much slower and clear. |
-fast | Notices and disclaimers: much faster. |
-whisper | Quiet settings, night-time notices: hushed and breathy. |
-- Works with the built-in voices, the beta voices, saved voices and clones. Not with voice_description.
-- It cannot be sent with instructions or a leading (…) (conflicting_fields). An unknown id is refused with unknown_style; the message lists the valid ids.
-- In our measurements (two voices, 12 styles, 10 call-center sentences) the styles clearly moved pace, pitch and energy the way they were asked to, did not add word errors, and the style was never read aloud. The voice stays closer to its own timbre than with the previous model, though it still shifts a little from the plain voice.
+## Talimat yazmak
+- Söyleyişi tarif edin: hız, ses yüksekliği, perde, duygu. Talimatınız, modelin eğitildiği biçimde İngilizce bir söyleyiş tarifine dönüştürülür (“A woman speaks calmly, a little slower than usual…”); roller ve hikâyeler (“sakin bir hemşire gibi”, “bir sır verir gibi”) yalnızca söyleyişe indirgenir.
+- Türkçe yazabilirsiniz. Her dildeki talimat modele gitmeden önce bu İngilizce tarife dönüştürülür. Metin Türkçe kalır.
+- Somut olun: hız, ses yüksekliği, duygu, ortam.
+- En fazla 200 karakter. Parantez içeremez.
+- Sonuç talimatın okunmasıyla başlıyorsa ses yeniden üretilir. Akışta (stream: true ya da WebSocket) 40 karakterden uzun bir talimatın ilk saniyeleri, dinlenip denetlenene kadar bekletilir; bu, ilk sese yaklaşık 0,4 saniye ekler. Kısa talimatlar beklemeden başlar.
+Örnek talimat | Ne zaman |
+Whisper. | Sessiz ortamlar, gece bildirimleri |
+speak like a calm nurse | Hasta aramaları, sonuç bildirimleri |
+speaking slowly and calmly | Randevu hatırlatmaları, yol tarifleri |
+cheerful and upbeat | Karşılama mesajları |
+in a serious, formal tone | Resmî duyurular |
+## Hazır stiller
+Çağrı merkezleri için ölçerek seçtiğimiz hazır stiller: talimat yazmak yerine style alanına birinin kimliğini gönderin. Her stil, modelin kelimesi kelimesine eğitildiği bir söyleyiş tarifine karşılık gelir; çevrilmez, yeniden yazılmaz ve akışın başını bekletmez.
+style | Ne zaman |
+support-warm | Günlük müşteri hizmetleri: sıcak ve güler yüzlü. |
+support-calm | Şikâyet, bekleme, kötü haber: sakin ve güven veren. |
+sales-energetic | Kampanya ve teklifler: canlı ve coşkulu. |
+reception-smile | Karşılama ve rezervasyon: parlak ve davetkâr. |
+apologetic | Gecikme, hata, özür: samimi ve mahcup. |
+empathetic | Hasta aramaları, zor haberler: şefkatli ve anlayışlı. |
+slow | Yaşlı arayanlar, numaralar, adresler: belirgin biçimde yavaş ve net. |
+fast | Bilgilendirme ve yasal metinler: belirgin biçimde hızlı. |
+whisper | Sessiz ortamlar, gece bildirimleri: alçak sesle, fısıldayarak. |
+- Yerleşik seslerle, beta seslerle, kayıtlı seslerle ve klonlarla çalışır. voice_description ile kullanılamaz.
+- instructions ya da baştaki (…) ile birlikte gönderilemez (conflicting_fields). Bilinmeyen bir kimlik unknown_style ile reddedilir; mesaj geçerli kimlikleri listeler.
+- Ölçümlerimizde (iki ses, 12 stil, 10 çağrı merkezi cümlesi) stiller hızı, perdeyi ve enerjiyi istenen yönde belirgin biçimde değiştirdi, kelime hatasını artırmadı ve stil tarifi hiç sesli okunmadı. Ses, önceki modele göre kendi rengine daha yakın kalır; yine de düz sese göre biraz değişir.
 GEThttps://voice.patientdesk.ai/v1/styles
 curl
 curl https://voice.patientdesk.ai/v1/audio/speech \
@@ -49,7 +49,7 @@ curl https://voice.patientdesk.ai/v1/audio/speech \
 "style": "support-warm",
 "input": "Merhaba, Anadolu Sigorta’ya hoş geldiniz. Size nasıl yardımcı olabilirim?" }' \
 --output karsilama.wav
-Response
+Yanıt
 {
 "object": "list",
 "data": [
@@ -73,8 +73,8 @@ Response
 "description": "Hushed and breathy, for quiet settings and night-time notices." }
 ]
 }
-## Instruction at the start of the text
-Alania-2 reads a parenthesised phrase at the very start of input as the instruction. This helps with tools that can only send text.
+## Metnin başında talimat
+Alania-2, input alanının başındaki parantezli ifadeyi talimat olarak okur. Bu, yalnızca metin gönderebilen araçlarda işe yarar.
 curl
 curl https://voice.patientdesk.ai/v1/audio/speech \
 -H "Authorization: Bearer pd_live_..." \
@@ -83,10 +83,10 @@ curl https://voice.patientdesk.ai/v1/audio/speech \
 "voice": "alania2-m1",
 "input": "(whispering softly) Bebek yeni uyudu, lütfen sessiz olalım." }' \
 --output fisilti.wav
-## With other fields
-Together with | Result |
-voice | The chosen built-in voice speaks as instructed. |
-reference_audio | The cloned voice speaks as instructed. |
-voice_description | Not allowed (conflicting_fields): the description already says how the voice speaks. |
-style | Not allowed (conflicting_fields): either a ready style or your own instruction. |
-model: "alania-v1" | Not allowed (unsupported_field). |
+## Diğer alanlarla
+Birlikte | Sonuç |
+voice | Seçilen yerleşik ses, talimata göre konuşur. |
+reference_audio | Klonlanan ses talimata göre konuşur. |
+voice_description | İzin verilmez (conflicting_fields): tarif zaten nasıl konuşacağını anlatır. |
+style | İzin verilmez (conflicting_fields): ya hazır bir stil ya da kendi talimatınız. |
+model: "alania-v1" | İzin verilmez (unsupported_field). |

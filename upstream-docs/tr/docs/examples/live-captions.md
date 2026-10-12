@@ -1,7 +1,7 @@
-# Live captions in the browser
-Stream the microphone to Duyu and show the words as they are spoken: partial drafts while someone talks, a settled final line when they pause.
-## 1 · A token from your server
-Do not give the browser a key. Mint a 10-minute session token on your server; the browser opens the WebSocket with ?token=. Details are on Authentication.
+# Tarayıcıda canlı altyazı
+Mikrofonu Duyu’ya akıtın ve sözcükleri söylendikçe gösterin: konuşurken partial taslaklar, durunca kesinleşmiş bir final satırı.
+## 1 · Sunucudan token
+Tarayıcıya anahtar vermeyin. Kendi sunucunuzda 10 dakikalık bir oturum tokenı üretin; tarayıcı WebSocket’i ?token= ile açar. Ayrıntılar Kimlik doğrulama sayfasında.
 Next.js
 // app/api/duyu-token/route.ts — a 10-minute token instead of your key
 import { SignJWT } from "jose";
@@ -16,8 +16,8 @@ const token = await new SignJWT({ scope: "playground" })
 .sign(secret);
 return Response.json({ token });
 }
-## 2 · Streaming the microphone
-A small AudioWorklet collects the microphone samples, which go out as Int16 PCM about every 50 ms. Tell Duyu the browser's own sample rate (usually 48,000) in the start message; it resamples.
+## 2 · Mikrofonu akıtmak
+Küçük bir AudioWorklet mikrofon örneklerini toplar; yaklaşık her 50 ms’de bir Int16 PCM olarak gönderilir. Tarayıcının kendi örnekleme hızını (çoğunlukla 48.000) start mesajında bildirin; Duyu yeniden örnekler.
 captions.js
 // captions.js — start from a click (microphone permission needs a gesture)
 export async function startCaptions(onPartial, onFinal) {
@@ -61,8 +61,8 @@ mic.getTracks().forEach((t) => t.stop());
 ctx.close();
 };
 }
-## 3 · Showing the words
-Replace the draft on every partial; on a final, append it and clear the draft. A partial may still change; only a final is settled.
+## 3 · Sözcükleri göstermek
+partial her geldiğinde taslağı değiştirin, final geldiğinde satıra ekleyip taslağı temizleyin. partial metinler değişebilir; kalıcı olan yalnızca finaldır.
 import { startCaptions } from "./captions.js";
 const done = document.querySelector("#done");
 const draft = document.querySelector("#draft");
@@ -74,12 +74,12 @@ stop = await startCaptions(
 (text) => { done.append(text + " "); draft.textContent = ""; }, // after a pause
 );
 };
-Messages you get
+Gelen mesajlar
 {"type":"ready","model":"duyu-1","quota":{"remaining_s":7130}}
 {"type":"partial","text":"Bugünkü toplantıda"}
 {"type":"partial","text":"Bugünkü toplantıda üç konuyu"}
 {"type":"final","text":"Bugünkü toplantıda üç konuyu konuşacağız.","start":0.38,"end":2.91,"audio_s":2.53,"infer_ms":121,"rtf":0.05}
-## Tips
-- Keep the browser's echoCancellation and noiseSuppression on, so audio from the speakers does not end up in the captions.
-- Draw a level meter from the vad events; no separate VAD is needed. See Live streaming.
-- Send stop when you are done: the open sentence closes as a final, then stopped follows. The billed time is in stopped.audio_s.
+## İpuçları
+- Tarayıcının echoCancellation ve noiseSuppression ayarlarını açık tutun; hoparlörden gelen ses altyazıya karışmaz.
+- vad olaylarıyla bir ses seviyesi göstergesi çizebilirsiniz; ayrı bir VAD gerekmez. Bkz. Canlı akış.
+- Bitirince stop gönderin: açık cümle bir final olarak kapanır, ardından stopped gelir. Faturalanan süre stopped.audio_s alanındadır.
