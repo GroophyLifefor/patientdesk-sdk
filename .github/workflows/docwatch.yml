@@ -49,14 +49,16 @@ jobs:
             echo "No baseline yet; bootstrapping and skipping the issue step."
           fi
           node scripts/docwatch.mjs sync --report drift-report.md
-          if git diff --quiet -- upstream-docs ':(exclude)upstream-docs/manifest.json'; then
+          # Stage first: `git diff` alone ignores untracked snapshot files.
+          git add -A -- upstream-docs
+          if git diff --cached --quiet -- upstream-docs ':(exclude)upstream-docs/manifest.json'; then
             echo "drift=false" >> "$GITHUB_OUTPUT"
             echo "No documentation drift."
           else
-            changed=$(git diff --name-only -- upstream-docs | grep -c '\.md$' || true)
+            changed=$(git diff --cached --name-only -- upstream-docs | grep -c '\.md$' || true)
             echo "drift=true" >> "$GITHUB_OUTPUT"
             echo "changed=$changed" >> "$GITHUB_OUTPUT"
-            git diff --stat -- upstream-docs
+            git diff --cached --stat -- upstream-docs
           fi
 
       - name: Open or update the docs-drift issue
