@@ -74,6 +74,9 @@ test("pageListFromSitemap keeps only docs pages for the requested languages", ()
     ],
   );
   assert.equal(pageListFromSitemap(xml, "https://speech.patientdesk.ai", ["en"]).length, 2);
+  // The language is chosen by the route, so TR pages are fetched locale-prefixed.
+  assert.equal(pages[0].fetchUrl, "https://speech.patientdesk.ai/tr/docs");
+  assert.equal(pages[2].fetchUrl, "https://speech.patientdesk.ai/en/docs");
 });
 
 test("snapshotPath maps URLs to the per-language snapshot tree", () => {

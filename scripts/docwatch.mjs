@@ -65,14 +65,18 @@ const usage = () => {
 
 // --------------------------------------------------------------- fetching ----
 
-async function fetchText(url, { attempts = 3, timeoutMs = 30_000 } = {}) {
+async function fetchText(url, { attempts = 3, timeoutMs = 30_000, headers = {} } = {}) {
   let lastError;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(new Error(`timeout after ${timeoutMs} ms`)), timeoutMs);
     try {
       const res = await fetch(url, {
-        headers: { "user-agent": USER_AGENT, accept: "text/html,application/xml,text/plain,*/*" },
+        headers: {
+          "user-agent": USER_AGENT,
+          accept: "text/html,application/xml,text/plain,*/*",
+          ...headers,
+        },
         signal: controller.signal,
         redirect: "follow",
       });
@@ -106,7 +110,10 @@ export function pageListFromSitemap(xml, base, langs) {
     const key = `${lang}${path}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    pages.push({ url: `${base}${path}`, lang, path });
+    // The site picks the language from the route, not from headers or geo, so
+    // fetch the locale-prefixed URL: /tr/docs/... or /en/docs/...
+    const fetchPath = lang === "en" ? path : `/tr${path}`;
+    pages.push({ url: `${base}${path}`, fetchUrl: `${base}${fetchPath}`, lang, path });
   }
   pages.sort((a, b) => a.url.localeCompare(b.url));
   return pages;
@@ -397,7 +404,9 @@ async function collect(args) {
     for (;;) {
       const page = pages[cursor++];
       if (!page) return;
-      const html = await fetchText(page.url);
+      const html = await fetchText(page.fetchUrl, {
+        headers: { "accept-language": page.lang === "tr" ? "tr-TR,tr;q=0.9" : "en-US,en;q=0.9" },
+      });
       results.set(page.url, extractArticle(html, page.url));
     }
   });
