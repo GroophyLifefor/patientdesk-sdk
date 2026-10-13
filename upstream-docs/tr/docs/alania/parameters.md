@@ -16,7 +16,7 @@ En kısa istek
 }
 ### Ses
 voicestring
-Alania-2: alania2-f1 (kadın), alania2-m1 (erkek), beta seslerden biri (alania2-m2, alania2-f2) ya da kaydedilmiş bir sesin kimliği. Alania-1: alania. voice_description ya da reference_audio gönderildiğinde yok sayılır.
+Alania-2: 11 yerleşik sesten biri: alania2-f1 (kadın, varsayılan), alania2-nisa, alania2-oncel (varsayılan erkek ses; male ya da erkek de olur), alania2-m1, alania2-emre, alania2-fikri, alania2-sezgin, alania2-selin, alania2-lina, alania2-melisa, alania2-nil (adlı sesler adıyla da seçilir); ya da kaydedilmiş bir sesin kimliği. Bkz. Sesler. Alania-1: alania. voice_description ya da reference_audio gönderildiğinde yok sayılır.
 Varsayılanalania2-f1
 stylestringalania-v2
 Hazır bir konuşma stilinin kimliği: support-warm, support-calm, sales-energetic, reception-smile, apologetic, empathetic, slow, fast, whisper (GET /v1/styles). instructions yerine geçer; onunla ya da voice_description ile birlikte kullanılamaz. Bkz. Hazır stiller.
@@ -106,3 +106,4 @@ x-queue-wait-msinteger
 İsteğin üretim yuvası beklediği süre. Yavaşlık şikâyetinde ilk bakılacak yer.
 ## Faturalandırma
 Alania karakter başına faturalanır; fiyat her modda aynıdır (yerleşik ses, üslup, tasarım, klonlama). Sayılan, input alanının gönderdiğiniz hâlidir; sayıların okunuşa çevrilmesi gibi işlemler sayıyı artırmaz. instructions, voice_description ve reference_text sayılmaz; input başındaki (…) sayılır.
+Fiyat 1.000 karakter başına ₺0,75 · $0.015; Alania-2 ve Alania-1 aynıdır, antalia-mini ücretsizdir. Bkz. Fiyatlar.

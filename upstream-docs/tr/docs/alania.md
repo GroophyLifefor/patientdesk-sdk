@@ -1,5 +1,5 @@
 # Alania: genel bakış
-Alania Türkçe metni sese çevirir. Alania-2 varsayılan modeldir: iki yerleşik ses, nasıl konuşacağını söyleyen kısa talimatlar, tarifle ya da kayıttan yeni sesler ve 48 kHz ses.
+Alania Türkçe metni sese çevirir. Alania-2 varsayılan modeldir: 11 yerleşik ses, nasıl konuşacağını söyleyen kısa talimatlar, tarifle ya da kayıttan yeni sesler ve 48 kHz ses.
 POSThttps://voice.patientdesk.ai/v1/audio/speech Deneyin
 Gövde OpenAI audio/speech ile aynıdır; mevcut OpenAI istemciniz base_url değiştirilerek çalışır. Alania-2’nin ek alanları aynı gövdeye eklenir. Tüm alanlar için parametre referansına bakın.
 curl https://voice.patientdesk.ai/v1/audio/speech \
@@ -17,15 +17,32 @@ Fiyat dört yolda da aynıdır: input alanındaki karakter başına.
 ## Sesler
 voice | Ses | Not |
 alania2-f1 | Kadın | Alania-2’nin varsayılan sesi. |
+alania2-nisa | Kadın, yumuşak ve neşeli | |
+alania2-oncel | Erkek, olgun ve güven veren | Varsayılan erkek ses. |
 alania2-m1 | Erkek | |
-alania2-m2 | Erkek, kalın | Beta. |
-alania2-f2 | Kadın, parlak | Beta. |
+alania2-emre | Erkek, yumuşak ve düşünceli | |
+alania2-fikri | Erkek, net ve nazik | |
+alania2-sezgin | Erkek, sakin ve buğulu | |
+alania2-selin | Kadın, rahat ve samimi | |
+alania2-lina | Kadın, sıcak ve sakin | |
+alania2-melisa | Kadın, parlak ve enerjik | |
+alania2-nil | Kadın, sıcak ve coşkulu | |
 alania | Erkek · Alania-1 | Yalnızca model: "alania-v1" ile. Kimliği alania-v1. |
 antalia-mini | Erkek · Antalia-2 Mini | Ücretsiz model. model: "antalia-mini" ile ya da model belirtmeden bu sesle. |
-Beta sesler, izin veren konuşmacıların kayıtlarıyla eğitilmiş yerleşik seslerdir ve diğerleri gibi voice ile seçilir. Her parça gönderilmeden önce dinlenir; eksik kelimeli bir okuma yeniden üretilir (akışta ilk parça hariç, o üretilirken çalınır). Yine de iki ana sesten biraz daha sık kelime kaçırabilirler. GET /v1/voices yanıtında "beta": true ile işaretlidirler.
+alania2-m2 ve alania2-f2 12 Ekim 2026’da kaldırıldı; bu adlarla gelen istekler 400 unknown_voice alır.
+Adlı dokuz ses de (alania2-nisa, alania2-oncel, alania2-emre, alania2-fikri, alania2-sezgin, alania2-selin, alania2-lina, alania2-melisa, alania2-nil) f1 ve m1 gibi tasarlanmış seslerdir: seslendirme sanatçıları kaydetmedi; aday sesler tasarladık, bunları kör dinlemeyle seçip adlandırdık. Her biri kendi sabit referansından konuşur, her istekte aynı tınıyla. voice alanına kimliğini ya da adını yazın ("nisa"; Öncel için "öncel" ya da "oncel"). Modele eğitilmedikleri için bir konuşma üslubuyla (instructions ya da style) f1 ve m1’e göre kendi tınılarından biraz daha fazla uzaklaşırlar.
 GEThttps://voice.patientdesk.ai/v1/voices
 Liste yerleşik sesleri ve hesabınıza kaydettiğiniz sesleri (kind: "custom"; source değeri "clone" ya da "design") içerir; bkz. Kaydedilmiş sesler. Tasarlanan bir ses kaydedildiğinde listelenir; istekle gönderilen kayıtlar kaydedilmez, listelenmez.
 Sesleri dinleyin
+-
+-
+Dokuz ses daha
+“Merhaba, ben sizin dijital asistanınızım. Size bugün nasıl yardımcı olabilirim?”
+-
+-
+-
+-
+-
 -
 -
 -
@@ -45,14 +62,14 @@ Yanıt
 "f0_band_hz": [199.5538, 238.605], "kind": "builtin", "tuned": false, "beta": false
 },
 {
-"id": "alania2-m1", "name": "Alania M1", "gender": "male", "language": "tr-TR",
+"id": "alania2-nisa", "name": "Nisa", "gender": "female", "language": "tr-TR",
 "model": "alania-v2", "sample_rate": 48000, "default": false,
-"f0_band_hz": [109.0961, 131.6118], "kind": "builtin", "tuned": false, "beta": false
+"f0_band_hz": [218.49, 279.76], "kind": "builtin", "tuned": false, "beta": false
 },
 {
-"id": "alania2-m2", "name": "Alania M2", "gender": "male", "language": "tr-TR",
+"id": "alania2-oncel", "name": "Öncel", "gender": "male", "language": "tr-TR",
 "model": "alania-v2", "sample_rate": 48000, "default": false,
-"f0_band_hz": [92.2704, 106.0399], "kind": "builtin", "tuned": false, "beta": true
+"f0_band_hz": [128.99, 167.0], "kind": "builtin", "tuned": false, "beta": false
 },
 …
 ]

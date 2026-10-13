@@ -27,3 +27,5 @@ temperaturenumber
 Default0
 ## Response
 { "text": "Merhaba, ben Ayşe Yılmaz. Sipariş numaram CNB123." }
+## Billing
+Duyu is billed per audio hour: files at $0.125 · ₺6, live streams at $0.225 · ₺11. What counts is the length of the audio (duration in a verbose_json response; stopped.audio_s on a stream), not the processing time. See Pricing.

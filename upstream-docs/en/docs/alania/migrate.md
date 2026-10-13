@@ -4,11 +4,11 @@ Alania-2 is now the default model. Requests that name no model reach Alania-2. T
 | alania-v1 | alania-v2 |
 Default | No (legacy) | Yes |
 Sample rate | 24 kHz | 48 kHz |
-Voices | alania | alania2-f1, alania2-m1 |
+Voices | alania | alania2-f1, alania2-oncel and more |
 Style, design, cloning | No | Yes |
 temperature | 0–2.0, default 0.30 | 0.6–2.0, default 1.0 |
 top_p · cfg | top_p | cfg |
-Price | Per character | Per character, the same |
+Price | $0.015 · ₺0,75 / 1,000 characters | The same |
 ## Where your request goes
 You send | Now |
 No model, no voice | Alania-2, alania2-f1, 48 kHz |
@@ -24,7 +24,7 @@ curl https://voice.patientdesk.ai/v1/audio/speech \
 -d '{ "model": "alania-v1", "input": "Merhaba, randevunuz onaylandı.", "voice": "alania" }' \
 --output merhaba-v1.wav # audio/wav, 24 kHz mono
 ## Moving to Alania-2
-- Send model: "alania-v2" and pick a voice: alania2-f1 or alania2-m1.
+- Send model: "alania-v2" and pick a voice: alania2-f1, alania2-oncel or another built-in voice.
 - Make your player ready for 48 kHz; read the rate from the response.
 - If you send temperature, retune it: Alania-2's default is 1.0. top_p no longer has an effect.
 - Optionally add style instructions.

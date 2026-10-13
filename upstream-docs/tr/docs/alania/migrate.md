@@ -4,11 +4,11 @@ Alania-2 artık varsayılan model. Model belirtmeyen istekler Alania-2’ye gide
 | alania-v1 | alania-v2 |
 Varsayılan | Hayır (eski sürüm) | Evet |
 Örnekleme hızı | 24 kHz | 48 kHz |
-Sesler | alania | alania2-f1, alania2-m1 |
+Sesler | alania | alania2-f1, alania2-oncel ve diğerleri |
 Üslup, tasarım, klonlama | Yok | Var |
 temperature | 0–2.0, varsayılan 0.30 | 0.6–2.0, varsayılan 1.0 |
 top_p · cfg | top_p | cfg |
-Fiyat | Karakter başına | Karakter başına, aynı |
+Fiyat | ₺0,75 · $0.015 / 1.000 karakter | Aynı |
 ## İsteğiniz nereye gider
 Gönderdiğiniz | Şimdi |
 model yok, voice yok | Alania-2, alania2-f1, 48 kHz |
@@ -24,7 +24,7 @@ curl https://voice.patientdesk.ai/v1/audio/speech \
 -d '{ "model": "alania-v1", "input": "Merhaba, randevunuz onaylandı.", "voice": "alania" }' \
 --output merhaba-v1.wav # audio/wav, 24 kHz mono
 ## Alania-2’ye geçmek
-- model: "alania-v2" gönderin ve bir ses seçin: alania2-f1 ya da alania2-m1.
+- model: "alania-v2" gönderin ve bir ses seçin: alania2-f1, alania2-oncel ya da diğer yerleşik seslerden biri.
 - Oynatıcınızı 48 kHz’e hazırlayın; hızı yanıttan okuyun.
 - temperature gönderiyorsanız yeniden ayarlayın: Alania-2’nin varsayılanı 1.0’dır. top_p artık etkisizdir.
 - İsterseniz üslup talimatı ekleyin.

@@ -36,9 +36,9 @@ empathetic | Patient calls, difficult news: gentle and understanding. |
 slow | Older callers, numbers, addresses: much slower and clear. |
 fast | Notices and disclaimers: much faster. |
 whisper | Quiet settings, night-time notices: hushed and breathy. |
-- Works with the built-in voices, the beta voices, saved voices and clones. Not with voice_description.
+- Works with the built-in voices, saved voices and clones. Not with voice_description.
 - It cannot be sent with instructions or a leading (…) (conflicting_fields). An unknown id is refused with unknown_style; the message lists the valid ids.
-- In our measurements (two voices, 12 styles, 10 call-center sentences) the styles clearly moved pace, pitch and energy the way they were asked to, did not add word errors, and the style was never read aloud. The voice stays closer to its own timbre than with the previous model, though it still shifts a little from the plain voice.
+- In our measurements (two voices, 12 styles, 10 call-center sentences) the styles clearly moved pace, pitch and energy the way they were asked to, did not add word errors, and the style was never read aloud. The voice stays closer to its own timbre than with the previous model, though it still shifts a little from the plain voice. The nine named voices (Nisa, Öncel and the rest) are not trained into the model, so they shift a little more than f1 and m1, with a style or an instruction.
 GEThttps://voice.patientdesk.ai/v1/styles
 curl
 curl https://voice.patientdesk.ai/v1/audio/speech \

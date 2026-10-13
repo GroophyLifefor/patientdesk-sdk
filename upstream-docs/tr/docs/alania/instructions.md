@@ -36,9 +36,9 @@ empathetic | Hasta aramaları, zor haberler: şefkatli ve anlayışlı. |
 slow | Yaşlı arayanlar, numaralar, adresler: belirgin biçimde yavaş ve net. |
 fast | Bilgilendirme ve yasal metinler: belirgin biçimde hızlı. |
 whisper | Sessiz ortamlar, gece bildirimleri: alçak sesle, fısıldayarak. |
-- Yerleşik seslerle, beta seslerle, kayıtlı seslerle ve klonlarla çalışır. voice_description ile kullanılamaz.
+- Yerleşik seslerle, kayıtlı seslerle ve klonlarla çalışır. voice_description ile kullanılamaz.
 - instructions ya da baştaki (…) ile birlikte gönderilemez (conflicting_fields). Bilinmeyen bir kimlik unknown_style ile reddedilir; mesaj geçerli kimlikleri listeler.
-- Ölçümlerimizde (iki ses, 12 stil, 10 çağrı merkezi cümlesi) stiller hızı, perdeyi ve enerjiyi istenen yönde belirgin biçimde değiştirdi, kelime hatasını artırmadı ve stil tarifi hiç sesli okunmadı. Ses, önceki modele göre kendi rengine daha yakın kalır; yine de düz sese göre biraz değişir.
+- Ölçümlerimizde (iki ses, 12 stil, 10 çağrı merkezi cümlesi) stiller hızı, perdeyi ve enerjiyi istenen yönde belirgin biçimde değiştirdi, kelime hatasını artırmadı ve stil tarifi hiç sesli okunmadı. Ses, önceki modele göre kendi rengine daha yakın kalır; yine de düz sese göre biraz değişir. Adlı dokuz ses (Nisa, Öncel ve diğerleri) modele eğitilmediği için hem stille hem talimatla f1 ve m1’e göre biraz daha fazla değişir.
 GEThttps://voice.patientdesk.ai/v1/styles
 curl
 curl https://voice.patientdesk.ai/v1/audio/speech \

@@ -52,4 +52,5 @@ WSSwss://voice.patientdesk.ai/v1/audio/stream
 - AuthenticationEvery request carries a key from your dashboard. The same key works for Alania and Duyu. Browser connections use short-lived tokens instead.
 - Parameters referenceEvery field of the POST /v1/audio/speech body, with its default and range. Send JSON or multipart/form-data.
 - Errors and limitsErrors follow the OpenAI shape: error.message, error.type, error.code. Temporary errors come with a Retry-After header.
+- PricingAlania is billed per character and Duyu per audio hour. The first month is free for the launch; prices exclude VAT.
 - Service statusLive status, 90-day uptime and incident history.

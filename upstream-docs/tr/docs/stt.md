@@ -27,3 +27,5 @@ temperaturenumber
 Varsayılan0
 ## Yanıt
 { "text": "Merhaba, ben Ayşe Yılmaz. Sipariş numaram CNB123." }
+## Faturalandırma
+Duyu ses saati başına faturalanır: dosyalar ₺6 · $0.125, canlı akış ₺11 · $0.225. Sayılan, sesin süresidir (verbose_json yanıtındaki duration; akışta stopped.audio_s), işlem süresi değil. Bkz. Fiyatlar.

@@ -1,5 +1,5 @@
 # Alania: overview
-Alania reads Turkish text aloud. Alania-2 is the default model: two built-in voices, short instructions for how to speak, new voices from a description or a recording, and 48 kHz audio.
+Alania reads Turkish text aloud. Alania-2 is the default model: 11 built-in voices, short instructions for how to speak, new voices from a description or a recording, and 48 kHz audio.
 POSThttps://voice.patientdesk.ai/v1/audio/speech Try it
 The body is the same as OpenAI audio/speech, so your OpenAI client works once you change base_url. Alania-2's extra fields go in the same body. See the parameters reference for every field.
 curl https://voice.patientdesk.ai/v1/audio/speech \
@@ -17,15 +17,32 @@ The price is the same for all four: per character of input.
 ## Voices
 voice | Voice | Note |
 alania2-f1 | Female | Alania-2's default voice. |
+alania2-nisa | Female, gentle and playful | |
+alania2-oncel | Male, mature and reassuring | The default male voice. |
 alania2-m1 | Male | |
-alania2-m2 | Male, deep | Beta. |
-alania2-f2 | Female, bright | Beta. |
+alania2-emre | Male, smooth and thoughtful | |
+alania2-fikri | Male, clear and gentle | |
+alania2-sezgin | Male, soft-spoken and breathy | |
+alania2-selin | Female, relaxed and friendly | |
+alania2-lina | Female, warm and calm | |
+alania2-melisa | Female, bright and energetic | |
+alania2-nil | Female, warm and enthusiastic | |
 alania | Male · Alania-1 | Only with model: "alania-v1". Its id is alania-v1. |
 antalia-mini | Male · Antalia-2 Mini | The free model. With model: "antalia-mini", or with this voice and no model. |
-The beta voices are built-in voices trained on recordings from speakers who gave their consent, chosen with voice like the others. Each chunk is listened to before it is sent and made again when a word is missing (except a stream's first chunk, which plays as it is made). They may still miss a word slightly more often than the two main voices. GET /v1/voices marks them with "beta": true.
+alania2-m2 and alania2-f2 were retired on 12 October 2026; requests naming them get 400 unknown_voice.
+The nine named voices (alania2-nisa, alania2-oncel, alania2-emre, alania2-fikri, alania2-sezgin, alania2-selin, alania2-lina, alania2-melisa, alania2-nil) are designed voices, like f1 and m1: no voice actor recorded them; we designed candidates, then picked these in blind listening and named them. Each speaks from its own fixed reference, with the same timbre on every request. Put its id or its name in voice ("nisa"; for Öncel, "öncel" or "oncel"). They are not trained into the model, so with a speaking style (instructions or style) they drift a little further from their own timbre than f1 and m1 do.
 GEThttps://voice.patientdesk.ai/v1/voices
 The list holds the built-in voices and the voices saved to your account (kind: "custom"; source is "clone" or "design"); see Saved voices. A designed voice is listed once you save it; recordings sent with a request are not saved or listed.
 Hear the voices
+-
+-
+Nine more voices
+“Merhaba, ben sizin dijital asistanınızım. Size bugün nasıl yardımcı olabilirim?”
+-
+-
+-
+-
+-
 -
 -
 -
@@ -45,14 +62,14 @@ Response
 "f0_band_hz": [199.5538, 238.605], "kind": "builtin", "tuned": false, "beta": false
 },
 {
-"id": "alania2-m1", "name": "Alania M1", "gender": "male", "language": "tr-TR",
+"id": "alania2-nisa", "name": "Nisa", "gender": "female", "language": "tr-TR",
 "model": "alania-v2", "sample_rate": 48000, "default": false,
-"f0_band_hz": [109.0961, 131.6118], "kind": "builtin", "tuned": false, "beta": false
+"f0_band_hz": [218.49, 279.76], "kind": "builtin", "tuned": false, "beta": false
 },
 {
-"id": "alania2-m2", "name": "Alania M2", "gender": "male", "language": "tr-TR",
+"id": "alania2-oncel", "name": "Öncel", "gender": "male", "language": "tr-TR",
 "model": "alania-v2", "sample_rate": 48000, "default": false,
-"f0_band_hz": [92.2704, 106.0399], "kind": "builtin", "tuned": false, "beta": true
+"f0_band_hz": [128.99, 167.0], "kind": "builtin", "tuned": false, "beta": false
 },
 …
 ]

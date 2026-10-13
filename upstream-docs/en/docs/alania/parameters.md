@@ -16,7 +16,7 @@ The shortest request
 }
 ### Voice
 voicestring
-Alania-2: alania2-f1 (female), alania2-m1 (male), a beta voice (alania2-m2, alania2-f2), or the id of a saved voice. Alania-1: alania. Ignored when voice_description or reference_audio is sent.
+Alania-2: one of the 11 built-in voices, alania2-f1 (female, the default), alania2-nisa, alania2-oncel (the default male voice; male or erkek work too), alania2-m1, alania2-emre, alania2-fikri, alania2-sezgin, alania2-selin, alania2-lina, alania2-melisa, alania2-nil (the named voices also go by their name), or the id of a saved voice. See Voices. Alania-1: alania. Ignored when voice_description or reference_audio is sent.
 Defaultalania2-f1
 stylestringalania-v2
 A ready speaking style's id: support-warm, support-calm, sales-energetic, reception-smile, apologetic, empathetic, slow, fast, whisper (GET /v1/styles). Stands in for instructions; cannot be combined with it or with voice_description. See Ready styles.
@@ -106,3 +106,4 @@ x-queue-wait-msinteger
 Time the request waited for a generation slot. The first thing to check when a caller says the API is slow.
 ## Billing
 Alania is billed per character, at the same price in every mode (built-in voice, style, design, cloning). What counts is input as you sent it; expanding numbers into words does not add to it. instructions, voice_description and reference_text are not counted; a leading (…) in input is.
+The price is $0.015 · ₺0,75 per 1,000 characters, the same for Alania-2 and Alania-1; antalia-mini is free. See Pricing.
