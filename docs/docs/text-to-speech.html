@@ -61,6 +61,7 @@
           <p class="nav-section-title">Migration</p>
           <ul class="nav-list">
           <li><a href="0.2.0.html">0.1.0 to 0.2.0</a></li>
+          <li><a href="0.2.1.html">0.2.0 to 0.2.1</a></li>
           </ul>
         </div>
         <div class="nav-section">
@@ -194,7 +195,7 @@ speech.queueWaitMs;   // x-queue-wait-ms
 <td><code>voice</code></td>
 <td><code>string</code></td>
 <td>model&#39;s voice</td>
-<td>Defaults: <code>alania</code> (v1), <code>alania2-f1</code> (v2), <code>antalia-mini</code>. Saved voice ids work too.</td>
+<td>Defaults: <code>alania</code> (v1), <code>alania2-f1</code> (v2), <code>antalia-mini</code>. One of the built-ins (see Built-in voices), a voice name, or a saved voice id.</td>
 </tr>
 <tr>
 <td><code>response_format</code></td>
@@ -233,6 +234,74 @@ speech.queueWaitMs;   // x-queue-wait-ms
 <td>Merged into the body for forward compatibility.</td>
 </tr>
 </tbody></table>
+<h2 id="built-in-voices">Built-in voices</h2>
+<table>
+<thead>
+<tr>
+<th>Voice</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>alania2-f1</code></td>
+<td>Female, Alania-2&#39;s default voice.</td>
+</tr>
+<tr>
+<td><code>alania2-nisa</code></td>
+<td>Female, gentle and playful.</td>
+</tr>
+<tr>
+<td><code>alania2-oncel</code></td>
+<td>Male, mature and reassuring. The default male voice.</td>
+</tr>
+<tr>
+<td><code>alania2-m1</code></td>
+<td>Male.</td>
+</tr>
+<tr>
+<td><code>alania2-emre</code></td>
+<td>Male, smooth and thoughtful.</td>
+</tr>
+<tr>
+<td><code>alania2-fikri</code></td>
+<td>Male, clear and gentle.</td>
+</tr>
+<tr>
+<td><code>alania2-sezgin</code></td>
+<td>Male, soft-spoken and breathy.</td>
+</tr>
+<tr>
+<td><code>alania2-selin</code></td>
+<td>Female, relaxed and friendly.</td>
+</tr>
+<tr>
+<td><code>alania2-lina</code></td>
+<td>Female, warm and calm.</td>
+</tr>
+<tr>
+<td><code>alania2-melisa</code></td>
+<td>Female, bright and energetic.</td>
+</tr>
+<tr>
+<td><code>alania2-nil</code></td>
+<td>Female, warm and enthusiastic.</td>
+</tr>
+<tr>
+<td><code>alania</code></td>
+<td>Alania-1 male, only with <code>model: &quot;alania-v1&quot;</code> (the request alias for <code>alania-v1</code>).</td>
+</tr>
+<tr>
+<td><code>antalia-mini</code></td>
+<td>Antalia-2 Mini male, the free model. Use it with <code>model: &quot;antalia-mini&quot;</code>, or with this voice and no model.</td>
+</tr>
+</tbody></table>
+<p>The named voices also accept their bare name (<code>&quot;nisa&quot;</code>, <code>&quot;öncel&quot;</code> or <code>&quot;oncel&quot;</code>
+for Öncel, or <code>&quot;male&quot;</code> / <code>&quot;erkek&quot;</code>). <code>alania2-m2</code> and <code>alania2-f2</code> were retired
+on 12 October 2026, so requests naming them get <code>400 unknown_voice</code>. The nine
+named voices are designed voices (no actor recordings), each speaking from its
+own fixed reference. They are not trained into the model, so with a style or an
+<code>instructions</code> they drift a little further from their own timbre than
+<code>alania2-f1</code> and <code>alania2-m1</code> do.</p>
 <h2 id="alania-2-fields">Alania-2 fields</h2>
 <table>
 <thead>
@@ -381,6 +450,7 @@ Request failures throw <code>PatientDeskError</code>. See <a href="errors.html">
           <ul>
           <li><a href="#basic-call">Basic call</a></li>
           <li><a href="#common-parameters">Common parameters</a></li>
+          <li><a href="#built-in-voices">Built-in voices</a></li>
           <li><a href="#alania-2-fields">Alania-2 fields</a></li>
           <li><a href="#output-formats">Output formats</a></li>
           <li><a href="#streaming">Streaming</a></li>

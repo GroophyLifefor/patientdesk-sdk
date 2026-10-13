@@ -40,7 +40,7 @@ test("live: voices.list() includes the built-in alania2 voices", { skip }, async
   if (!voices) return;
   const ids = voices.data.map((v) => v.id);
   // The list uses `alania-v1` for the Alania-1 voice (`alania` is the request alias).
-  for (const id of ["alania-v1", "alania2-f1", "alania2-m1"]) {
+  for (const id of ["alania-v1", "alania2-f1", "alania2-m1", "alania2-oncel", "alania2-nisa"]) {
     assert.ok(ids.includes(id), `missing voice ${id} in: ${ids.join(", ")}`);
   }
   const f1 = voices.data.find((v) => v.id === "alania2-f1");

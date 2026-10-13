@@ -11,8 +11,28 @@ export type DuyuModel = "duyu-1" | "whisper-1" | (string & {});
 /** Output container for Alania text-to-speech. */
 export type TtsFormat = "wav" | "mp3" | "opus" | "flac" | "aac" | "pcm" | "mulaw" | "alaw";
 
-/** Built-in Alania voices; a saved voice id is also accepted. */
-export type AlaniaVoice = "alania" | "alania2-f1" | "alania2-m1" | "alania2-m2" | "alania2-f2" | "antalia-mini" | (string & {});
+/**
+ * Built-in Alania voices; a saved voice id or any other string is also
+ * accepted, so retired ids still compile and reach the API. The named voices
+ * (`alania2-nisa` …) also accept their bare name (`"nisa"`; for Öncel,
+ * `"öncel"` or `"oncel"`). `alania2-m2` and `alania2-f2` were retired and now
+ * return `400 unknown_voice`.
+ */
+export type AlaniaVoice =
+  | "alania"
+  | "alania2-f1"
+  | "alania2-nisa"
+  | "alania2-oncel"
+  | "alania2-m1"
+  | "alania2-emre"
+  | "alania2-fikri"
+  | "alania2-sezgin"
+  | "alania2-selin"
+  | "alania2-lina"
+  | "alania2-melisa"
+  | "alania2-nil"
+  | "antalia-mini"
+  | (string & {});
 
 /** Ready-made conversation styles, listed by `GET /v1/styles`. */
 export type AlaniaStyle =

@@ -1,6 +1,6 @@
 {
   "name": "patientdesk-sdk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Unofficial SDK for PatientDesk Turkish voice models — Alania (text-to-speech, REST + streaming) and Duyu (speech-to-text, multipart + streaming), plus voices, pronunciations, styles, models and health.",
   "keywords": [
     "patientdesk",

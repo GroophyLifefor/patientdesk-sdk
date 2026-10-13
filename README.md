@@ -56,7 +56,7 @@ console.log((await fetchAlaniaHealth()).status);
 const speech = await pd.speech.create({
   input: "Yarın saat 14:05 için randevunuz var.", // ≤ 5,000 chars
   model: "alania-v2",           // alania-v2 | alania-v1 | antalia-mini | ...
-  voice: "alania2-f1",          // alania2-f1/m1/m2/f2, alania, antalia-mini, saved voice id
+  voice: "alania2-f1",          // alania2-f1/nisa/oncel/m1/emre/fikri/sezgin/selin/lina/melisa/nil, alania, antalia-mini, saved voice id
   response_format: "mp3",       // wav | mp3 | opus | flac | aac | pcm | mulaw | alaw
   sample_rate: 24000,           // 8000…48000, capped at the model's rate
   instructions: "speaking slowly and calmly", // alania-v2 only
@@ -267,6 +267,7 @@ Upgrade guides live in the docs, one page per version:
 | From | Guide |
 | --- | --- |
 | 0.1.0 | [Upgrading to 0.2.0](https://groophylifefor.github.io/patientdesk-sdk/docs/0.2.0.html) |
+| 0.2.0 | [Upgrading to 0.2.1](https://groophylifefor.github.io/patientdesk-sdk/docs/0.2.1.html) |
 
 Each release adds `docs/md/<version>.md` and a nav entry in
 `scripts/build-docs.mjs`.

@@ -50,13 +50,39 @@ Read the body **once**. Pick one of `arrayBuffer`, `blob` or `stream`.
 | --- | --- | --- | --- |
 | `input` | `string` | required | Up to 5,000 characters. Longer text throws `RangeError`. |
 | `model` | `string` | `"alania-v1"` | `alania-v2`, `alania-v1`, `antalia-mini` (free). The API's own default is `alania-v2`. |
-| `voice` | `string` | model's voice | Defaults: `alania` (v1), `alania2-f1` (v2), `antalia-mini`. Saved voice ids work too. |
+| `voice` | `string` | model's voice | Defaults: `alania` (v1), `alania2-f1` (v2), `antalia-mini`. One of the built-ins (see Built-in voices), a voice name, or a saved voice id. |
 | `response_format` | `TtsFormat` | `"wav"` | `wav`, `mp3`, `opus`, `flac`, `aac`, `pcm`, `mulaw`, `alaw`. |
 | `sample_rate` | `number` | model's rate | `8000`, `16000`, `22050`, `24000`, `44100`, `48000` (capped at the model). G.711 defaults to 8000. |
 | `temperature` | `number` | server side | v1: 0–2.0 (default 0.30) · v2: 0.6–2.0 (default 1.0). |
 | `seed` | `number` | unset | Same text + seed + settings reproduce the same audio. |
 | `stream` | `boolean` | `false` | Stream the audio as it is generated; see [Streaming](streaming.md). |
 | `extra` | `Record<string, unknown>` | unset | Merged into the body for forward compatibility. |
+
+## Built-in voices
+
+| Voice | Note |
+| --- | --- |
+| `alania2-f1` | Female, Alania-2's default voice. |
+| `alania2-nisa` | Female, gentle and playful. |
+| `alania2-oncel` | Male, mature and reassuring. The default male voice. |
+| `alania2-m1` | Male. |
+| `alania2-emre` | Male, smooth and thoughtful. |
+| `alania2-fikri` | Male, clear and gentle. |
+| `alania2-sezgin` | Male, soft-spoken and breathy. |
+| `alania2-selin` | Female, relaxed and friendly. |
+| `alania2-lina` | Female, warm and calm. |
+| `alania2-melisa` | Female, bright and energetic. |
+| `alania2-nil` | Female, warm and enthusiastic. |
+| `alania` | Alania-1 male, only with `model: "alania-v1"` (the request alias for `alania-v1`). |
+| `antalia-mini` | Antalia-2 Mini male, the free model. Use it with `model: "antalia-mini"`, or with this voice and no model. |
+
+The named voices also accept their bare name (`"nisa"`, `"öncel"` or `"oncel"`
+for Öncel, or `"male"` / `"erkek"`). `alania2-m2` and `alania2-f2` were retired
+on 12 October 2026, so requests naming them get `400 unknown_voice`. The nine
+named voices are designed voices (no actor recordings), each speaking from its
+own fixed reference. They are not trained into the model, so with a style or an
+`instructions` they drift a little further from their own timbre than
+`alania2-f1` and `alania2-m1` do.
 
 ## Alania-2 fields
 
