@@ -90,6 +90,6 @@ if (alania.readyState === WebSocket.OPEN) alania.send(JSON.stringify({ type: "st
 - Parça boyu. Twilio 20 ms gönderir; köprü 60 ms biriktirip öyle iletir (Duyu 40–100 ms’lik parçalar bekler).
 ## Gecikme
 Adım | Süre | Ayar |
-Cümle sonu | ~500 ms sessizlik | eager_final: true yaklaşık 120 ms öne alır (köprüde açık). |
+Cümle sonu | ~500 ms sessizlik | min_silence_ms bu süreyi değiştirir (200–2000 ms; bkz. Sıra alma). eager_final: true yaklaşık 120 ms öne alır (köprüde açık). |
 Sizin ajanınız | size bağlı | LLM yanıtını cümle cümle akıtıp her cümleyi ayrı speak olarak gönderin. |
 İlk ses | ~190 ms | μ-law dönüşümü sunucuda yapılır, süre eklemez. |

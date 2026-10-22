@@ -11,7 +11,7 @@ if (m.type === "final") console.log(m.start, m.end, m.text);
 };
 // when done: ws.send(JSON.stringify({ type: "stop" }))
 ## Protokol
-- Bağlantıyı açın ve {"type":"start","sampleRate":16000} gönderin. İsteğe bağlı: partials: true, partial_ms, eager_final: true.
+- Bağlantıyı açın ve {"type":"start","sampleRate":16000} gönderin. İsteğe bağlı: partials: true, partial_ms, eager_final: true, min_silence_ms.
 - Her 40–100 ms’de bir ham Int16 PCM parçası gönderin (ikili mesaj). Sunucu yeniden örnekler; 8 kHz telefon bandı desteklenir.
 - Olayları JSON olarak okuyun. Bitirince {"type":"stop"} gönderin; açık cümle final olarak kapanır ve ardından stopped gelir.
 ## Olaylar
@@ -42,3 +42,4 @@ message, code.
 {"type":"stopped","audio_s":2.68}
 ## Sıra alma
 final, 500 ms sessizlikten sonra gelir. eager_final: true ile model, sessizlik eşiğini beklemeden cümleyi kesinleştirebilir; sesli asistanlarda yanıtı yaklaşık 120 ms öne alır. Harici bir VAD gerekmez: vad ve segment_* olayları modelin kendisinden gelir.
+Bu süreyi bağlantı başına start mesajındaki min_silence_ms ile değiştirebilirsiniz: 200–2000 ms; aralık dışı bir değer bad_request hatası döndürür. Daha kısa bir süre yanıtı öne alır, ama cümle içindeki duraklamaları da cümle sonu sayar: Türkçe konuşmada 250 ms bir cümleyi ortasından böldü. Telefon için 400–500 ms ile başlayıp kendi çağrılarınızda ölçün. eager_final, kararı 400 ms’lik bir duraklamada vermeye başlar; bu yüzden 400 ms ve altındaki bir min_silence_ms ile bir şey kazandırmaz.

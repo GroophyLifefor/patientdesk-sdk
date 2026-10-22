@@ -11,7 +11,7 @@ if (m.type === "final") console.log(m.start, m.end, m.text);
 };
 // when done: ws.send(JSON.stringify({ type: "stop" }))
 ## Protocol
-- Open the connection and send {"type":"start","sampleRate":16000}. Optional: partials: true, partial_ms, eager_final: true.
+- Open the connection and send {"type":"start","sampleRate":16000}. Optional: partials: true, partial_ms, eager_final: true, min_silence_ms.
 - Send a raw Int16 PCM chunk every 40–100 ms (binary message). The server resamples; the 8 kHz telephone band is supported.
 - Read events as JSON. When done, send {"type":"stop"}; the open utterance closes as a final and stopped follows.
 ## Events
@@ -42,3 +42,4 @@ Example event stream
 {"type":"stopped","audio_s":2.68}
 ## Turn taking
 A final arrives after 500 ms of silence. With eager_final: true the model may commit the utterance before the silence threshold, moving a voice agent's reply about 120 ms earlier. No external VAD is needed: vad and segment_* events come from the model itself.
+Set it per connection with min_silence_ms in the start message: 200–2000 ms; a value outside that range returns a bad_request error. A shorter silence answers sooner, but it also treats pauses inside a sentence as the end: on Turkish speech, 250 ms split a sentence in the middle. For phone calls, start at 400–500 ms and measure on your own calls. eager_final starts its decode at a 400 ms pause, so it gains nothing with a min_silence_ms of 400 or less.

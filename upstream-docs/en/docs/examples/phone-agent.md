@@ -90,6 +90,6 @@ if (alania.readyState === WebSocket.OPEN) alania.send(JSON.stringify({ type: "st
 - Chunk size. Twilio sends 20 ms; the bridge forwards 60 ms at a time (Duyu expects 40–100 ms chunks).
 ## Latency
 Step | Time | Knob |
-End of sentence | ~500 ms of silence | eager_final: true moves it about 120 ms earlier (on in the bridge). |
+End of sentence | ~500 ms of silence | min_silence_ms changes it (200–2000 ms; see Turn taking). eager_final: true moves it about 120 ms earlier (on in the bridge). |
 Your agent | up to you | Stream the LLM reply and send each sentence as its own speak. |
 First audio | ~190 ms | The μ-law conversion runs on the server and adds nothing. |

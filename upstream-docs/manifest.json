@@ -1,6 +1,6 @@
 {
   "source": "https://speech.patientdesk.ai",
-  "fetchedAt": "2026-10-13T14:18:24.662Z",
+  "fetchedAt": "2026-10-22T11:59:42.680Z",
   "pages": {
     "tr/docs": {
       "url": "https://speech.patientdesk.ai/docs",
@@ -74,8 +74,8 @@
     },
     "tr/docs/examples/phone-agent": {
       "url": "https://speech.patientdesk.ai/docs/examples/phone-agent",
-      "sha256": "2242c47aebca1f9d04d4888fdf2a2c480a0784625e2fc987b3045157fb7d5003",
-      "bytes": 4758
+      "sha256": "7a06fa833bd79627c98a8bab175f90e1c09901846d19b41016c1ece6ea28d25d",
+      "bytes": 4831
     },
     "tr/docs/examples/subtitles": {
       "url": "https://speech.patientdesk.ai/docs/examples/subtitles",
@@ -109,8 +109,8 @@
     },
     "tr/docs/stt/streaming": {
       "url": "https://speech.patientdesk.ai/docs/stt/streaming",
-      "sha256": "a23ee744c337e1b66d4d9fece6a5931da6fcaf71d5f93995a746a47f8fb8fd8f",
-      "bytes": 2361
+      "sha256": "8d5e37961d43f8ac7ed599f63b10e5c66e56bef3d642f18ac3d78618d676a226",
+      "bytes": 2928
     },
     "en/docs": {
       "url": "https://speech.patientdesk.ai/en/docs",
@@ -184,8 +184,8 @@
     },
     "en/docs/examples/phone-agent": {
       "url": "https://speech.patientdesk.ai/en/docs/examples/phone-agent",
-      "sha256": "7bafa75d348469bccdc469bf079f76e71736864844ed8b3888d21ad147992d30",
-      "bytes": 4599
+      "sha256": "99f43154fb6a8d4375af3f4fd4666e95d78b0f0a058b3bfdf66a4ebef1b69557",
+      "bytes": 4659
     },
     "en/docs/examples/subtitles": {
       "url": "https://speech.patientdesk.ai/en/docs/examples/subtitles",
@@ -219,8 +219,8 @@
     },
     "en/docs/stt/streaming": {
       "url": "https://speech.patientdesk.ai/en/docs/stt/streaming",
-      "sha256": "e1e7c6ef2acd93231136a73e0871592555c9cbd2eb04dabdb5667d9245ba03ac",
-      "bytes": 2283
+      "sha256": "344e371fa365f6039da96e102a5a3ff444e2f7d5285a32d0378d97c0db230aeb",
+      "bytes": 2759
     }
   }
 }
