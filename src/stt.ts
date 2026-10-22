@@ -133,6 +133,7 @@ export class AudioApi {
           eager_final: options.eagerFinal ?? true,
           ...(options.partials !== undefined ? { partials: options.partials } : {}),
           ...(options.partialMs !== undefined ? { partial_ms: options.partialMs } : {}),
+          ...(options.minSilenceMs !== undefined ? { min_silence_ms: options.minSilenceMs } : {}),
           ...options.extra,
         }),
       );

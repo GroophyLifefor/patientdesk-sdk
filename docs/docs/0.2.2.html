@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>0.2.1 to 0.2.2 · patientdesk-sdk docs</title>
+  <meta name="description" content="This guide covers `patientdesk-sdk` `0.2.1` to `0.2.2`. The release has no breaking API or type change. It adds the streaming STT turn-taking knob that PatientDesk documented.">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/0.2.2.html">
+  <meta property="og:title" content="0.2.1 to 0.2.2 · patientdesk-sdk docs">
+  <meta property="og:description" content="This guide covers `patientdesk-sdk` `0.2.1` to `0.2.2`. The release has no breaking API or type change. It adds the streaming STT turn-taking knob that PatientDesk documented.">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+  <script defer src="https://umami.ordu.dev/script.js" data-website-id="250bd07e-3f44-447c-9e94-b4b012366c75"></script>
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="0.2.2.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Migration</p>
+          <ul class="nav-list">
+          <li><a href="0.2.0.html">0.1.0 to 0.2.0</a></li>
+          <li><a href="0.2.1.html">0.2.0 to 0.2.1</a></li>
+          <li><a href="0.2.2.html" class="active">0.2.1 to 0.2.2</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="upgrading-to-0-2-2">Upgrading to 0.2.2</h1>
+<p>This guide covers <code>patientdesk-sdk</code> <code>0.2.1</code> to <code>0.2.2</code>. The release has no
+breaking API or type change. It adds the streaming STT turn-taking knob that
+PatientDesk documented.</p>
+<h2 id="at-a-glance">At a glance</h2>
+<ul>
+<li><code>transcribeStream()</code> accepts a new <code>minSilenceMs</code> start option, sent as
+<code>min_silence_ms</code> in the <code>start</code> frame.</li>
+<li>It sets how many milliseconds of silence close a sentence, from 200 to 2000.
+A value outside that range returns <code>bad_request</code>.</li>
+<li>Omitting it keeps the server default, so existing code and types are
+unchanged.</li>
+</ul>
+<h2 id="turn-taking">Turn taking</h2>
+<p>A streaming <code>final</code> arrives after the server sees the configured silence. The
+default is about 500 ms. <code>minSilenceMs</code> changes it per connection:</p>
+<pre><code class="language-ts">const stream = pd.audio.transcribeStream(
+  { final: (text) =&gt; console.log(text) },
+  { sampleRate: 16000, eagerFinal: true, minSilenceMs: 450 },
+);
+</code></pre>
+<p>A shorter silence answers sooner but treats pauses inside a sentence as the
+end. PatientDesk reports that on Turkish speech, 250 ms split a sentence in the
+middle. For phone calls, start at 400–500 ms and measure on your own calls.</p>
+<p><code>eagerFinal</code> starts its decode at a 400 ms pause, so a <code>minSilenceMs</code> of 400 or
+less gains nothing from it. See <a href="streaming.html">Streaming</a> for the full option
+table.</p>
+<h2 id="backward-compatibility">Backward compatibility</h2>
+<ul>
+<li><code>minSilenceMs</code> is optional and the SDK sets no default, so the request is
+identical when it is omitted.</li>
+<li>The SDK does not validate the range locally. A value outside 200–2000 is sent
+as-is and the server answers <code>bad_request</code>.</li>
+</ul>
+<h2 id="verifying-the-upgrade">Verifying the upgrade</h2>
+<pre class="shell-block"><code><span class="sh-cli">npm</span> <span class="sh-cmd">run</span> <span class="sh-arg">typecheck</span>
+<span class="sh-cli">npm</span> <span class="sh-cmd">test</span>
+</code></pre></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#at-a-glance">At a glance</a></li>
+          <li><a href="#turn-taking">Turn taking</a></li>
+          <li><a href="#backward-compatibility">Backward compatibility</a></li>
+          <li><a href="#verifying-the-upgrade">Verifying the upgrade</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

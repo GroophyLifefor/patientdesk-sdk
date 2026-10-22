@@ -71,7 +71,7 @@ const stream = pd.audio.transcribeStream(
     stopped: (info) => console.log("billed", info.audioSeconds),
     error: (message) => console.error(message),
   },
-  { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200 },
+  { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200, minSilenceMs: 450 },
 );
 
 stream.sendAudio(pcmChunk); // raw 16-bit PCM, mono
@@ -85,12 +85,20 @@ await stream.closed;
 | `eagerFinal` | `true` | Finalize without waiting for the silence threshold (~120 ms sooner). |
 | `partials` | off | Ask for draft `partial` events while a sentence is spoken. |
 | `partialMs` | server | Draft interval in milliseconds. |
+| `minSilenceMs` | server | Silence in milliseconds before a final, 200–2000. |
 | `token` | unset | Use `?token=` instead of the API key. |
 | `extra` | unset | Merged into the `start` frame. |
 
 Events: `ready` (`model`, `quota.remaining_s`), `vad` (`prob`, `active`),
 `segment_start`, `partial`, `segment_end`, `final` (`text`, `start`, `end`,
 `audio_s`, `infer_ms`, `rtf`), `stopped` (`audio_s`), `error`, `close`.
+
+`minSilenceMs` sets the pause the server waits for before it closes a sentence.
+A shorter silence answers sooner but treats pauses inside a sentence as the end:
+on Turkish speech, 250 ms split a sentence in the middle. For phone calls, start
+at 400–500 ms and measure on your own calls. A value outside 200–2000 returns
+`bad_request`. `eagerFinal` starts its decode at a 400 ms pause, so it gains
+nothing with a `minSilenceMs` of 400 or less.
 
 With 40–100 ms of audio per binary frame the server has enough to work with.
 `examples/stt-live.mjs` does exactly that.
