@@ -155,7 +155,7 @@ const stream = pd.audio.transcribeStream(
     final: (text, raw) => console.log(text, raw.start, raw.end, raw.audio_s),
     stopped: (info) => console.log("billed", info.audioSeconds),
   },
-  { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200 },
+  { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200, minSilenceMs: 450 },
 );
 
 stream.sendAudio(pcmChunk); // raw 16-bit PCM, mono

@@ -36,7 +36,7 @@ const stream = pd.audio.transcribeStream(
     error: (message) => console.error(`[stt-live] error: ${message}`),
     close: (code, reason) => console.log(`[stt-live] closed ${code} ${reason}`),
   },
-  { sampleRate: 16000, eagerFinal: true, partials: true },
+  { sampleRate: 16000, eagerFinal: true, partials: true, minSilenceMs: 450 },
 );
 
 const mic = streamMicPcm((chunk) => stream.sendAudio(chunk), device);

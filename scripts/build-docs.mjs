@@ -61,6 +61,7 @@ const NAV = [
     items: [
       { slug: "0.2.0", label: "0.1.0 to 0.2.0" },
       { slug: "0.2.1", label: "0.2.0 to 0.2.1" },
+      { slug: "0.2.2", label: "0.2.1 to 0.2.2" },
     ],
   },
   {

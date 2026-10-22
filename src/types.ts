@@ -416,6 +416,8 @@ export interface SttStreamStartOptions {
   partials?: boolean;
   /** Draft interval in milliseconds; server default when omitted. */
   partialMs?: number;
+  /** Silence in milliseconds before a final (200–2000); server default when omitted. */
+  minSilenceMs?: number;
   /** Authenticate with `?token=` (a session token) instead of the API key. */
   token?: string;
   /** Extra fields merged into the `start` frame. */

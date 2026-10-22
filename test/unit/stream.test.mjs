@@ -31,7 +31,7 @@ test("transcribeStream sends a start frame on open and routes every event", asyn
       stopped: (info) => (seen.stopped = info),
       error: (message) => seen.errors.push(message),
     },
-    { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200 },
+    { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200, minSilenceMs: 450 },
   );
 
   const socket = FakeWebSocket.instances[0];
@@ -44,6 +44,7 @@ test("transcribeStream sends a start frame on open and routes every event", asyn
     eager_final: true,
     partials: true,
     partial_ms: 200,
+    min_silence_ms: 450,
   });
 
   socket.message({ type: "ready", model: "duyu-1", quota: { remaining_s: 7130 } });

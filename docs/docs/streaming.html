@@ -62,6 +62,7 @@
           <ul class="nav-list">
           <li><a href="0.2.0.html">0.1.0 to 0.2.0</a></li>
           <li><a href="0.2.1.html">0.2.0 to 0.2.1</a></li>
+          <li><a href="0.2.2.html">0.2.1 to 0.2.2</a></li>
           </ul>
         </div>
         <div class="nav-section">
@@ -153,7 +154,7 @@ transcript shortly after each sentence ends. Auth is <code>?key=</code> (or <cod
     stopped: (info) =&gt; console.log(&quot;billed&quot;, info.audioSeconds),
     error: (message) =&gt; console.error(message),
   },
-  { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200 },
+  { sampleRate: 16000, eagerFinal: true, partials: true, partialMs: 200, minSilenceMs: 450 },
 );
 
 stream.sendAudio(pcmChunk); // raw 16-bit PCM, mono
@@ -189,6 +190,11 @@ await stream.closed;
 <td>Draft interval in milliseconds.</td>
 </tr>
 <tr>
+<td><code>minSilenceMs</code></td>
+<td>server</td>
+<td>Silence in milliseconds before a final, 200–2000.</td>
+</tr>
+<tr>
 <td><code>token</code></td>
 <td>unset</td>
 <td>Use <code>?token=</code> instead of the API key.</td>
@@ -202,6 +208,12 @@ await stream.closed;
 <p>Events: <code>ready</code> (<code>model</code>, <code>quota.remaining_s</code>), <code>vad</code> (<code>prob</code>, <code>active</code>),
 <code>segment_start</code>, <code>partial</code>, <code>segment_end</code>, <code>final</code> (<code>text</code>, <code>start</code>, <code>end</code>,
 <code>audio_s</code>, <code>infer_ms</code>, <code>rtf</code>), <code>stopped</code> (<code>audio_s</code>), <code>error</code>, <code>close</code>.</p>
+<p><code>minSilenceMs</code> sets the pause the server waits for before it closes a sentence.
+A shorter silence answers sooner but treats pauses inside a sentence as the end:
+on Turkish speech, 250 ms split a sentence in the middle. For phone calls, start
+at 400–500 ms and measure on your own calls. A value outside 200–2000 returns
+<code>bad_request</code>. <code>eagerFinal</code> starts its decode at a 400 ms pause, so it gains
+nothing with a <code>minSilenceMs</code> of 400 or less.</p>
 <p>With 40–100 ms of audio per binary frame the server has enough to work with.
 <code>examples/stt-live.mjs</code> does exactly that.</p>
 <h2 id="requirements">Requirements</h2>
