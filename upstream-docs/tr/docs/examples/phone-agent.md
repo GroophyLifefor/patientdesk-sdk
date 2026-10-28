@@ -43,15 +43,17 @@ const m = JSON.parse(data);
 if (m.type === "segment_start" && streamSid) {
 twilio.send(JSON.stringify({ event: "clear", streamSid })); // the caller talks over us: stop playback
 muted = true;
+for (let i = 0; i < unfinished; i++) alania.send(JSON.stringify({ type: "cancel" })); // and stop Alania
 }
 if (m.type === "final" && m.text) say(await answer(m.text));
 });
 // Alania speaks: text in, 8 kHz μ-law out, the format the phone line carries.
 const alania = new WebSocket("wss://voice.patientdesk.ai/v1/audio/speech/stream?encoding=mulaw&key=" + KEY);
-let ready = false, queue = [];
+let ready = false, queue = [], unfinished = 0; // unfinished: speaks sent with no speech_end yet
+const send = (msg) => { alania.send(msg); unfinished++; };
 const say = (input) => {
 const msg = JSON.stringify({ type: "speak", voice: "alania2-f1", input });
-ready ? alania.send(msg) : queue.push(msg);
+ready ? send(msg) : queue.push(msg);
 };
 alania.on("message", (data, isBinary) => {
 if (isBinary) {
@@ -60,8 +62,9 @@ twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: data.t
 return;
 }
 const m = JSON.parse(data);
-if (m.type === "ready") { ready = true; queue.forEach((q) => alania.send(q)); queue = []; }
+if (m.type === "ready") { ready = true; queue.forEach(send); queue = []; }
 if (m.type === "speech_start") muted = false;
+if (m.type === "speech_end") unfinished--;
 if (m.type === "error") console.error("alania", m.code, m.message);
 });
 twilio.on("message", (raw) => {
@@ -85,7 +88,7 @@ if (duyu.readyState === WebSocket.OPEN) duyu.send(JSON.stringify({ type: "stop" 
 if (alania.readyState === WebSocket.OPEN) alania.send(JSON.stringify({ type: "stop" }));
 });
 });
-- Söz kesme. Arayan, Alania konuşurken söze girerse Duyu segment_start gönderir. Köprü Twilio’ya clear gönderip tampondaki sesi durdurur ve bir sonraki yanıta kadar kalan sesi atar.
+- Söz kesme. Arayan, Alania konuşurken söze girerse Duyu segment_start gönderir. Köprü Twilio’ya clear gönderip tampondaki sesi durdurur, Alania’ya bitmemiş her speak için bir cancel göndererek üretimi keser ve bir sonraki yanıt başlayana kadar gelen sesi atar. Bkz. Söz kesme.
 - Sıra. Alania speak mesajlarını sırayla, birer birer işler. Bağlantı ready göndermeden gelen mesajlar kuyrukta bekler.
 - Parça boyu. Twilio 20 ms gönderir; köprü 60 ms biriktirip öyle iletir (Duyu 40–100 ms’lik parçalar bekler).
 ## Gecikme

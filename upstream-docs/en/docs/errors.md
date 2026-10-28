@@ -17,11 +17,12 @@ Status | code | Meaning |
 401 | missing_api_keyinvalid_api_key | No key, or an invalid or revoked key. |
 401 | invalid_tokentoken_expired | The session token is invalid or has expired. |
 401 | auth_unavailable | Authentication is temporarily unavailable; retry. |
-429 | quota_exceeded | The monthly quota is used up. |
+402 | insufficient_balance | Your credit is used up. Add credit or turn on automatic top-up; Antalia-2 Mini keeps working. |
+429 | quota_exceeded | The monthly ceiling is used up (it guards against abuse; write to us to raise it). |
 429 | rate_limit_exceeded | The per-minute request limit or the concurrency limit was reached. Retry-After is in seconds. |
 503 | model_loadingserver_busyhigh_demand | Temporary; retry after Retry-After. |
 ## Retrying
-429 and 503 are temporary: wait for the time in Retry-After and send the same request again. quota_exceeded does not clear by waiting. A 400-range error points at the request itself; fix it instead of retrying.
+429 and 503 are temporary: wait for the time in Retry-After and send the same request again. quota_exceeded and 402 insufficient_balance do not clear by waiting. A 400-range error points at the request itself; fix it instead of retrying.
 A client that retries
 import time
 import requests
@@ -68,7 +69,7 @@ Status | code | Meaning |
 404 | model_not_found | model is not duyu-1 or whisper-1. |
 413 | file_too_largeaudio_too_long | The 100 MB or 2 hour limit was exceeded. |
 ## Limits
-These are the default limits. Talk to us if you need higher ones.
+These are the default limits. We raise the concurrent request and stream limits per account, for example for a phone line whose calls cluster at the same hour. Write to sezgin@patientdesk.ai with your peak numbers.
 Limit | Value |
 Requests per minute (per key, each product) | 600 |
 Alania · text length | 5,000 characters |

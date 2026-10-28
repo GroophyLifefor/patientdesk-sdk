@@ -41,7 +41,9 @@ if (m.type === "error") console.error(m.code, m.message);
 };
 ### Gönderdiğiniz mesajlar
 speakJSON
-input zorunlu. HTTP gövdesindeki alanların hepsi geçerlidir: model, voice, instructions, voice_description, reference_audio (base64), reference_text, consent, cfg, temperature, seed, sample_rate; ayrıca encoding (pcm_s16le, mulaw, alaw) bağlantının çıktı ayarını bu mesaj için değiştirir. Mesajlar sırayla, birer birer işlenir.
+input zorunlu. HTTP gövdesindeki alanların hepsi geçerlidir: model, voice, instructions, voice_description, reference_audio (base64), reference_text, consent, cfg, temperature, seed, sample_rate; ayrıca encoding (pcm_s16le, mulaw, alaw) bağlantının çıktı ayarını bu mesaj için değiştirir. Mesajlar sırayla, birer birer işlenir; yalnızca cancel beklemeden etki eder.
+cancelJSON
+Süren speak’i hemen durdurur: ses kesilir, speech_end "canceled": true ile gelir ve bağlantı açık kalır; kuyruktaki bir sonraki speak sırası gelince başlar. Her cancel, bitmemiş en eski speak’i durdurur; bekleyen her speak için bir cancel hepsini susturur. Bekleyen speak yoksa bir şey yapmaz. Bkz. Söz kesme.
 stopJSON
 stopped döner ve bağlantı kapanır. close de aynı işi görür.
 ### Aldığınız mesajlar
@@ -52,7 +54,7 @@ characters, model, voice, sample_rate, encoding (pcm_s16le, mulaw ya da alaw), d
 ikiliPCM16 · G.711
 Ses, mono: PCM16 ya da encoding mulaw/alaw ise örnek başına bir bayt. Alania-2’de mesajlar genellikle 0,16 saniyedir (48 kHz’de 7.680 örnek); son parça daha kısa olabilir.
 speech_endJSON
-audio_s, infer_ms. Bu speak bitti.
+audio_s, infer_ms; bir cancel durdurduysa canceled: true. Bu speak bitti.
 stoppedJSON
 stop mesajına yanıt.
 errorJSON
@@ -65,6 +67,10 @@ message, code, category, retry_after. Bilinmeyen mesaj türünden sonra bağlant
 {"type":"stopped"}
 Hata mesajı
 {"type":"error","message":"Cloning a voice needs `consent: true`: …","code":"consent_required","category":"invalid_request_error","retry_after":0}
+### Söz kesme
+- Arayan, ajan konuşurken söze girerse gönderdiğiniz ve speech_end’i henüz gelmemiş her speak için bir {"type":"cancel"} gönderin ve tamponda bekleyen sesi çalmayı bırakın. cancel’dan önce yola çıkmış ses yine de gelebilir; bir sonraki speech_start’a kadar gelen ikili mesajları atın.
+- Bir speak, speech_start gönderildiği anda ücretlenir: cancel ya da kapanan bağlantı onu yarıda kesse de input alanının tüm karakterleri sayılır. speech_start’ı gelmeden iptal edilen (örneğin kuyrukta bekleyen) bir speak yalnızca bir speech_end (audio_s: 0, canceled: true) alır ve ücretlenmez.
+- Bağlantıyı kapatmak da süren speak’i durdurur, ama bir sonraki yanıt için yeni bir bağlantı açmak gerekir. cancel bağlantıyı açık tutar.
 ## Sıkıştırılmış biçimler
 Akışsız isteklerde response_format mp3, opus (Ogg), flac ya da aac olabilir; mobil uygulamalarda bant genişliğini azaltır. Bunlar akışta kullanılamaz: yarım kalmış bir kap dosyası çalınamaz, bu yüzden 400 döner.
 ## Telefon (8 kHz)

@@ -52,5 +52,5 @@ WSSwss://voice.patientdesk.ai/v1/audio/stream
 - Kimlik doğrulamaHer istek panelden aldığınız anahtarı taşır. Aynı anahtar Alania’da ve Duyu’da geçerlidir. Tarayıcıdan açılan bağlantılar için kısa ömürlü tokenlar vardır.
 - Parametre referansıPOST /v1/audio/speech gövdesindeki her alan, varsayılanı ve aralığıyla. JSON ya da multipart/form-data gönderebilirsiniz.
 - Hatalar ve sınırlarHatalar OpenAI biçimindedir: error.message, error.type, error.code. Geçici hatalar Retry-After başlığıyla gelir.
-- FiyatlarAlania karakter başına, Duyu ses saati başına faturalanır. Lansmana özel olarak ilk ay ücretsizdir; fiyatlara KDV dahil değildir.
+- FiyatlarAlania karakter başına, Duyu ses saati başına faturalanır. Ön ödemeli bakiyeden düşer; lansmana özel olarak ilk ay ücretsizdir. Fiyatlara KDV dahil değildir.
 - Servis durumuCanlı durum, 90 günlük erişilebilirlik, olay geçmişi.

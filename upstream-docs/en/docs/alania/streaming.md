@@ -41,7 +41,9 @@ if (m.type === "error") console.error(m.code, m.message);
 };
 ### Messages you send
 speakJSON
-input is required. Every field of the HTTP body works: model, voice, instructions, voice_description, reference_audio (base64), reference_text, consent, cfg, temperature, seed, sample_rate; encoding (pcm_s16le, mulaw, alaw) overrides the connection's output for this message. Messages are handled in order, one at a time.
+input is required. Every field of the HTTP body works: model, voice, instructions, voice_description, reference_audio (base64), reference_text, consent, cfg, temperature, seed, sample_rate; encoding (pcm_s16le, mulaw, alaw) overrides the connection's output for this message. Messages are handled in order, one at a time; only cancel takes effect at once.
+cancelJSON
+Stops the speak in progress at once: its audio ends, its speech_end arrives with "canceled": true, and the connection stays open; the next queued speak starts in its turn. Each cancel ends the oldest speak not yet ended, so one cancel per outstanding speak silences them all. With none outstanding it does nothing. See Barge-in.
 stopJSON
 Answered with stopped, then the connection closes. close does the same.
 ### Messages you receive
@@ -52,7 +54,7 @@ characters, model, voice, sample_rate, encoding (pcm_s16le, mulaw or alaw), disc
 binaryPCM16 · G.711
 Audio, mono: PCM16, or one byte a sample when encoding is mulaw/alaw. On Alania-2 messages are usually 0.16 seconds (7,680 samples at 48 kHz); the last one may be shorter.
 speech_endJSON
-audio_s, infer_ms. This speak is done.
+audio_s, infer_ms; canceled: true when a cancel stopped it. This speak is done.
 stoppedJSON
 The reply to stop.
 errorJSON
@@ -65,6 +67,10 @@ Example message stream
 {"type":"stopped"}
 Error message
 {"type":"error","message":"Cloning a voice needs `consent: true`: …","code":"consent_required","category":"invalid_request_error","retry_after":0}
+### Barge-in
+- When the caller talks over the agent, send one {"type":"cancel"} for each speak you sent that has no speech_end yet, and stop playing what you have buffered. Audio already on its way before the cancel may still arrive; drop binary messages until the next speech_start.
+- A speak is charged once its speech_start is sent: all of its input characters, even when a cancel or a closed connection cuts it short. A speak canceled before its speech_start (one still queued, say) gets only a speech_end (audio_s: 0, canceled: true) and is not charged.
+- Closing the connection also stops the speak in progress, but the next reply then needs a new connection. cancel keeps it open.
 ## Compressed formats
 For non-streaming requests response_format can be mp3, opus (Ogg), flac or aac, which saves bandwidth for mobile apps. They cannot be streamed: half a container file is not playable, so they are refused with a 400.
 ## Telephony (8 kHz)

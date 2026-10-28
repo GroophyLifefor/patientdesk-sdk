@@ -17,11 +17,12 @@ Durum | code | Anlamı |
 401 | missing_api_keyinvalid_api_key | Anahtar yok ya da geçersiz. |
 401 | invalid_tokentoken_expired | Oturum tokenı geçersiz ya da süresi dolmuş. |
 401 | auth_unavailable | Kimlik doğrulama geçici olarak yanıt vermiyor; tekrar deneyin. |
-429 | quota_exceeded | Aylık kota doldu. |
+402 | insufficient_balance | Bakiye bitti. Bakiye yükleyin ya da otomatik yüklemeyi açın; Antalia-2 Mini çalışmaya devam eder. |
+429 | quota_exceeded | Aylık üst sınır doldu (kötüye kullanıma karşı; yükseltmek için bize yazın). |
 429 | rate_limit_exceeded | Dakikalık istek sınırı ya da eşzamanlı istek sınırı aşıldı. Retry-After saniye cinsindendir. |
 503 | model_loadingserver_busyhigh_demand | Geçici; Retry-After süresi sonra tekrar deneyin. |
 ## Yeniden denemek
-429 ve 503 geçicidir: Retry-After başlığındaki süre kadar bekleyip aynı isteği tekrar gönderin. quota_exceeded beklemekle geçmez. 400 ile başlayan hatalar istekteki bir sorunu gösterir; tekrar denemek yerine isteği düzeltin.
+429 ve 503 geçicidir: Retry-After başlığındaki süre kadar bekleyip aynı isteği tekrar gönderin. quota_exceeded ve 402 insufficient_balance beklemekle geçmez. 400 ile başlayan hatalar istekteki bir sorunu gösterir; tekrar denemek yerine isteği düzeltin.
 Yeniden deneyen bir istemci
 import time
 import requests
@@ -68,7 +69,7 @@ Durum | code | Anlamı |
 404 | model_not_found | model duyu-1 ya da whisper-1 değil. |
 413 | file_too_largeaudio_too_long | 100 MB ya da 2 saat sınırı aşıldı. |
 ## Sınırlar
-Varsayılan sınırlar aşağıdadır. Daha yüksek sınırlar için bizimle görüşün.
+Varsayılan sınırlar aşağıdadır. Eşzamanlı istek ve akış sınırlarını hesap başına yükseltiyoruz: örneğin aramaları aynı saatte toplanan bir telefon hattı için. Tepe sayınızla sezgin@patientdesk.ai adresine yazın.
 Sınır | Değer |
 İstek / dakika (anahtar başına, her ürün) | 600 |
 Alania · metin uzunluğu | 5.000 karakter |
