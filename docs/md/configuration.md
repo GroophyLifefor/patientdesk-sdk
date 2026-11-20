@@ -25,7 +25,7 @@ const pd = new PatientDesk({
 | `baseUrl` | `string` | `https://voice.patientdesk.ai/v1` | Trailing slashes are trimmed. |
 | `fetch` | `typeof fetch` | global `fetch` | Inject for tests or edge runtimes. |
 | `WebSocket` | `WebSocketConstructor` | global `WebSocket` | Needed for streaming STT and the TTS socket. |
-| `maxRetries` | `number` | `2` | Retries for 429, 5xx and network errors. `quota_exceeded` is never retried. |
+| `maxRetries` | `number` | `2` | Retries for 429, 5xx and network errors. `quota_exceeded` and `402 insufficient_balance` are never retried. |
 | `timeout` | `number` | `120000` | Per-request milliseconds. `0` disables. |
 | `defaultHeaders` | `Record<string, string>` | `{}` | Merged into every request. |
 

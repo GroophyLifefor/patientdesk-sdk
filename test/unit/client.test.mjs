@@ -102,6 +102,26 @@ test("does not retry quota_exceeded (waiting will not clear it)", async () => {
   assert.equal(fetch.calls.length, 1);
 });
 
+test("does not retry 402 insufficient_balance, even with Retry-After", async () => {
+  const fetch = mockFetch(() =>
+    errorResponse({
+      status: 402,
+      message: "credit used up",
+      code: "insufficient_balance",
+      retryAfter: 1,
+    }),
+  );
+  const pd = new PatientDesk({ apiKey: "k", fetch, maxRetries: 3 });
+  await assert.rejects(() => pd.speech.create({ input: "hi" }), (err) => {
+    assert.equal(err.status, 402);
+    assert.equal(err.code, "insufficient_balance");
+    assert.equal(err.isInsufficientBalance, true);
+    assert.equal(err.isRateLimit, false);
+    return true;
+  });
+  assert.equal(fetch.calls.length, 1);
+});
+
 test("wraps a transport failure as a network_error", async () => {
   const pd = new PatientDesk({ apiKey: "k", fetch: failingFetch(), maxRetries: 0 });
   await assert.rejects(() => pd.speech.create({ input: "hi" }), (err) => {

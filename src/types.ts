@@ -164,8 +164,11 @@ export interface SpeechSocketEvents {
   speechStart?: (info: { characters?: number; model?: string; voice?: string; sampleRate?: number; raw: unknown }) => void;
   /** Binary audio chunk (PCM16 or G.711, mono). */
   audio?: (chunk: Uint8Array) => void;
-  /** The current `speak` finished: `audio_s`, `infer_ms`. */
-  speechEnd?: (info: { audioSeconds?: number; inferMs?: number; raw: unknown }) => void;
+  /**
+   * The current `speak` finished: `audio_s`, `infer_ms`. `canceled` is `true`
+   * when a `cancel` stopped it.
+   */
+  speechEnd?: (info: { audioSeconds?: number; inferMs?: number; canceled: boolean; raw: unknown }) => void;
   /** The `stop` message was acknowledged and the server is closing. */
   stopped?: (raw: unknown) => void;
   /** Server error frame: `message`, `code`, `category`, `retry_after`. */
@@ -177,7 +180,14 @@ export interface SpeechSocketEvents {
 /** Handle returned by `speech.socket()`. */
 export interface SpeechSocket {
   /** Queue a sentence to speak. Messages are sent in order, one at a time. */
-  speak(params: SpeechCreateParams): void;
+  speak(params: SpeechCreateParams): Promise<void>;
+  /**
+   * Stop the oldest `speak` that has no `speech_end` yet (barge-in). Its
+   * `speechEnd` arrives with `canceled: true` and the connection stays open.
+   * Send one `cancel` per unfinished `speak` to silence them all; with none
+   * outstanding it does nothing. Audio already in flight may still arrive.
+   */
+  cancel(): Promise<void>;
   /** Ask the server to finish; `speech_end`/`stopped` arrive before the close. */
   stop(): void;
   /** Close the socket immediately. */

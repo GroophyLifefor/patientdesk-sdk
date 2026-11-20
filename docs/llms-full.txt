@@ -463,6 +463,43 @@ await socket.closed;
 one at a time. The connection can set `model`, `encoding` (`pcm_s16le`, `mulaw`,
 `alaw`) and `sample_rate` for every message.
 
+### Barge-in
+
+`socket.cancel()` stops the oldest `speak` that has no `speech_end` yet, at once.
+Its `speechEnd` arrives with `canceled: true` and the connection stays open. The
+next queued `speak` starts in its turn. When the caller talks over the agent,
+send one `cancel` per unfinished `speak` and drop buffered audio:
+
+```ts
+let unfinished = 0;
+let muted = false;
+const socket = pd.speech.socket({
+  speechStart: () => (muted = false),
+  audio: (chunk) => !muted && player.write(chunk),
+  speechEnd: () => unfinished--,
+});
+const say = (input: string) => {
+  unfinished++;
+  return socket.speak({ input });
+};
+
+// The caller started talking:
+muted = true;
+player.clear();
+for (let i = 0; i < unfinished; i++) socket.cancel();
+```
+
+- Audio already on its way before the cancel may still arrive. Drop it until the
+  next `speechStart`.
+- A `speak` is charged once its `speech_start` is sent, for all its input
+  characters, even when a cancel cuts it short. One canceled before its
+  `speech_start` gets only a `speech_end` (`audio_s: 0`, `canceled: true`) and is
+  not charged.
+- `speak()` and `cancel()` reach the server in call order. With no `speak`
+  outstanding, `cancel()` does nothing.
+- `close()` also stops the current `speak`, but the next reply then needs a new
+  connection.
+
 ## WebSocket (STT)
 
 `wss://voice.patientdesk.ai/v1/audio/stream` takes raw PCM and emits a `final`
@@ -818,7 +855,7 @@ const pd = new PatientDesk({
 | `baseUrl` | `string` | `https://voice.patientdesk.ai/v1` | Trailing slashes are trimmed. |
 | `fetch` | `typeof fetch` | global `fetch` | Inject for tests or edge runtimes. |
 | `WebSocket` | `WebSocketConstructor` | global `WebSocket` | Needed for streaming STT and the TTS socket. |
-| `maxRetries` | `number` | `2` | Retries for 429, 5xx and network errors. `quota_exceeded` is never retried. |
+| `maxRetries` | `number` | `2` | Retries for 429, 5xx and network errors. `quota_exceeded` and `402 insufficient_balance` are never retried. |
 | `timeout` | `number` | `120000` | Per-request milliseconds. `0` disables. |
 | `defaultHeaders` | `Record<string, string>` | `{}` | Merged into every request. |
 
@@ -915,6 +952,7 @@ try {
 | `retryAfterSeconds` | `number \| undefined` | From `Retry-After` or `details`. |
 | `resetAt` | `string \| undefined` | ISO time from `error.details.resetAt`. |
 | `isRateLimit` | `boolean` (getter) | `true` when `status === 429`. |
+| `isInsufficientBalance` | `boolean` (getter) | `true` when `status === 402`: the prepaid credit is used up. |
 | `resetsAt` | `Date \| null` (getter) | `resetAt`, or now plus `retryAfterSeconds`. |
 
 `resetsAt` returns a `Date` when the server gave either a reset time or a retry
@@ -945,7 +983,9 @@ The client retries automatically on `408`, `409`, `425`, `429`, `500`, `502`,
 
 - Default `maxRetries` is `2`, so up to 3 attempts.
 - `429 quota_exceeded` is **never** retried: waiting will not clear the monthly
-  quota. Back off until the quota resets instead.
+  ceiling. It guards against abuse, so ask PatientDesk to raise it.
+- `402 insufficient_balance` is **never** retried: the prepaid credit is used
+  up. Add credit or turn on automatic top-up. `antalia-mini` keeps working.
 - When a `Retry-After` header is present, the wait is capped at 30 seconds.
 - Otherwise the delay grows exponentially, base `250 ms`, capped at `4 s`, with a
   small jitter.
@@ -1476,6 +1516,79 @@ npm test
 
 ---
 
+Source: https://groophylifefor.github.io/patientdesk-sdk/docs/0.2.3.md
+
+# Upgrading to 0.2.3
+
+This guide covers `patientdesk-sdk` `0.2.2` to `0.2.3`. The release has no
+breaking API change. It follows two PatientDesk changes: barge-in on the TTS
+WebSocket, and prepaid credit with a new `402` error.
+
+## At a glance
+
+- `speech.socket()` returns a new `cancel()` that stops the oldest unfinished
+  `speak` and keeps the connection open.
+- `speechEnd` carries `canceled: true` when a cancel stopped that `speak`.
+- `402 insufficient_balance` is never retried, and `PatientDeskError` has an
+  `isInsufficientBalance` getter.
+- `SpeechSocket.speak()` is typed as returning `Promise<void>`, which it already
+  did at runtime.
+
+## Barge-in
+
+When the caller talks over the agent, send one `cancel` for every `speak` that
+has no `speech_end` yet, then drop buffered audio until the next `speechStart`:
+
+```ts
+let unfinished = 0;
+const socket = pd.speech.socket({ speechEnd: () => unfinished-- });
+const say = (input: string) => {
+  unfinished++;
+  return socket.speak({ input });
+};
+
+// The caller started talking:
+for (let i = 0; i < unfinished; i++) socket.cancel();
+```
+
+A `speak` is charged once its `speech_start` is sent, even when a cancel cuts it
+short. One canceled while still queued is not charged. `speak()` and `cancel()`
+reach the server in call order. See [Streaming](streaming.md#barge-in).
+
+## Prepaid credit
+
+PatientDesk now draws usage from prepaid credit. When it runs out, Alania and
+Duyu requests return `402 insufficient_balance`. `antalia-mini` stays free.
+
+```ts
+try {
+  await pd.speech.create({ input: "Merhaba" });
+} catch (err) {
+  if (err instanceof PatientDeskError && err.isInsufficientBalance) {
+    // Add credit or turn on automatic top-up; retrying will not help.
+  }
+}
+```
+
+`429 quota_exceeded` is now a monthly ceiling against abuse rather than the
+billing limit. It is still never retried.
+
+## Backward compatibility
+
+- `cancel()` and `canceled` are additions. Code that does not use them behaves
+  as before.
+- Before 0.2.3, a `402` with a `Retry-After` header could be retried. It now
+  fails at once.
+
+## Verifying the upgrade
+
+```sh
+npm run typecheck
+npm test
+```
+
+---
+
 Source: https://groophylifefor.github.io/patientdesk-sdk/docs/testing.md
 
 # Testing
@@ -1676,8 +1789,9 @@ see whether it is a `user` or `pool` limit, and `resetsAt` for the reset time.
 The client already retried twice, honouring `Retry-After`. Back off until
 `resetsAt`, then retry.
 
-`429 quota_exceeded` is not retried, the monthly quota does not clear by
-waiting. The free `antalia-mini` model has its own limits (`429
+`429 quota_exceeded` is not retried, the monthly ceiling does not clear by
+waiting. `402 insufficient_balance` (`err.isInsufficientBalance`) is not retried
+either: add credit or turn on automatic top-up. The free `antalia-mini` model has its own limits (`429
 free_limit_exceeded`) and does not consume quota.
 
 ```ts

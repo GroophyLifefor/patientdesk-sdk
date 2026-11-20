@@ -227,9 +227,11 @@ export class PatientDesk implements HttpCore {
         if (response.ok) return response;
 
         const retryAfter = parseRetryAfter(response.headers.get("retry-after"));
-        // `quota_exceeded` will not clear by waiting; never retry it.
+        // `quota_exceeded` and `402 insufficient_balance` will not clear by
+        // waiting; never retry them, even with a `Retry-After`.
         const quotaExceeded = response.status === 429 && (await errorCodeOf(response)) === "quota_exceeded";
-        const retryable = !quotaExceeded && (retryAfter !== undefined || RETRYABLE_STATUS.has(response.status));
+        const neverRetry = quotaExceeded || response.status === 402;
+        const retryable = !neverRetry && (retryAfter !== undefined || RETRYABLE_STATUS.has(response.status));
         if (!retryable || attempt === this.maxRetries) {
           throw await this.toError(response, retryAfter);
         }

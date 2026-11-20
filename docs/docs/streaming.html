@@ -63,6 +63,7 @@
           <li><a href="0.2.0.html">0.1.0 to 0.2.0</a></li>
           <li><a href="0.2.1.html">0.2.0 to 0.2.1</a></li>
           <li><a href="0.2.2.html">0.2.1 to 0.2.2</a></li>
+          <li><a href="0.2.3.html">0.2.2 to 0.2.3</a></li>
           </ul>
         </div>
         <div class="nav-section">
@@ -142,6 +143,40 @@ await socket.closed;
 <p><code>speak()</code> accepts the same fields as <code>speech.create()</code> and messages are processed
 one at a time. The connection can set <code>model</code>, <code>encoding</code> (<code>pcm_s16le</code>, <code>mulaw</code>,
 <code>alaw</code>) and <code>sample_rate</code> for every message.</p>
+<h3 id="barge-in">Barge-in</h3>
+<p><code>socket.cancel()</code> stops the oldest <code>speak</code> that has no <code>speech_end</code> yet, at once.
+Its <code>speechEnd</code> arrives with <code>canceled: true</code> and the connection stays open. The
+next queued <code>speak</code> starts in its turn. When the caller talks over the agent,
+send one <code>cancel</code> per unfinished <code>speak</code> and drop buffered audio:</p>
+<pre><code class="language-ts">let unfinished = 0;
+let muted = false;
+const socket = pd.speech.socket({
+  speechStart: () =&gt; (muted = false),
+  audio: (chunk) =&gt; !muted &amp;&amp; player.write(chunk),
+  speechEnd: () =&gt; unfinished--,
+});
+const say = (input: string) =&gt; {
+  unfinished++;
+  return socket.speak({ input });
+};
+
+// The caller started talking:
+muted = true;
+player.clear();
+for (let i = 0; i &lt; unfinished; i++) socket.cancel();
+</code></pre>
+<ul>
+<li>Audio already on its way before the cancel may still arrive. Drop it until the
+next <code>speechStart</code>.</li>
+<li>A <code>speak</code> is charged once its <code>speech_start</code> is sent, for all its input
+characters, even when a cancel cuts it short. One canceled before its
+<code>speech_start</code> gets only a <code>speech_end</code> (<code>audio_s: 0</code>, <code>canceled: true</code>) and is
+not charged.</li>
+<li><code>speak()</code> and <code>cancel()</code> reach the server in call order. With no <code>speak</code>
+outstanding, <code>cancel()</code> does nothing.</li>
+<li><code>close()</code> also stops the current <code>speak</code>, but the next reply then needs a new
+connection.</li>
+</ul>
 <h2 id="websocket-stt">WebSocket (STT)</h2>
 <p><code>wss://voice.patientdesk.ai/v1/audio/stream</code> takes raw PCM and emits a <code>final</code>
 transcript shortly after each sentence ends. Auth is <code>?key=</code> (or <code>{ token }</code>).</p>
@@ -241,6 +276,7 @@ headers. Treat the URL as a secret and do not log it.</p></article>
           <ul>
           <li><a href="#http-streaming-tts">HTTP streaming (TTS)</a></li>
           <li><a href="#websocket-tts">WebSocket (TTS)</a></li>
+          <li><a href="#barge-in">Barge-in</a></li>
           <li><a href="#websocket-stt">WebSocket (STT)</a></li>
           <li><a href="#requirements">Requirements</a></li>
           <li><a href="#known-flakiness">Known flakiness</a></li>

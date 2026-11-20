@@ -63,6 +63,7 @@
           <li><a href="0.2.0.html">0.1.0 to 0.2.0</a></li>
           <li><a href="0.2.1.html">0.2.0 to 0.2.1</a></li>
           <li><a href="0.2.2.html">0.2.1 to 0.2.2</a></li>
+          <li><a href="0.2.3.html">0.2.2 to 0.2.3</a></li>
           </ul>
         </div>
         <div class="nav-section">
@@ -144,6 +145,11 @@ try {
 <td><code>true</code> when <code>status === 429</code>.</td>
 </tr>
 <tr>
+<td><code>isInsufficientBalance</code></td>
+<td><code>boolean</code> (getter)</td>
+<td><code>true</code> when <code>status === 402</code>: the prepaid credit is used up.</td>
+</tr>
+<tr>
 <td><code>resetsAt</code></td>
 <td><code>Date | null</code> (getter)</td>
 <td><code>resetAt</code>, or now plus <code>retryAfterSeconds</code>.</td>
@@ -200,7 +206,9 @@ delay, and <code>null</code> otherwise.</p>
 <ul>
 <li>Default <code>maxRetries</code> is <code>2</code>, so up to 3 attempts.</li>
 <li><code>429 quota_exceeded</code> is <strong>never</strong> retried: waiting will not clear the monthly
-quota. Back off until the quota resets instead.</li>
+ceiling. It guards against abuse, so ask PatientDesk to raise it.</li>
+<li><code>402 insufficient_balance</code> is <strong>never</strong> retried: the prepaid credit is used
+up. Add credit or turn on automatic top-up. <code>antalia-mini</code> keeps working.</li>
 <li>When a <code>Retry-After</code> header is present, the wait is capped at 30 seconds.</li>
 <li>Otherwise the delay grows exponentially, base <code>250 ms</code>, capped at <code>4 s</code>, with a
 small jitter.</li>

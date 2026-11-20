@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>0.2.2 to 0.2.3 · patientdesk-sdk docs</title>
+  <meta name="description" content="This guide covers `patientdesk-sdk` `0.2.2` to `0.2.3`. The release has no breaking API change. It follows two PatientDesk changes: barge-in on the TTS WebSocket, and prepaid cred…">
+  <link rel="canonical" href="https://groophylifefor.github.io/patientdesk-sdk/docs/0.2.3.html">
+  <meta property="og:title" content="0.2.2 to 0.2.3 · patientdesk-sdk docs">
+  <meta property="og:description" content="This guide covers `patientdesk-sdk` `0.2.2` to `0.2.3`. The release has no breaking API change. It follows two PatientDesk changes: barge-in on the TTS WebSocket, and prepaid cred…">
+  <meta property="og:type" content="article">
+  <link rel="stylesheet" href="../assets/site.css">
+  <script defer src="https://umami.ordu.dev/script.js" data-website-id="250bd07e-3f44-447c-9e94-b4b012366c75"></script>
+</head>
+<body class="layout-doc">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand site-brand" href="../index.html">patientdesk-sdk</a>
+      <nav class="topnav" aria-label="Site">
+        <a class="toplink on" href="0.2.3.html">Documentation</a>
+        <a class="toplink" href="https://www.npmjs.com/package/patientdesk-sdk">npm</a>
+        <a class="toplink" href="https://github.com/GroophyLifefor/patientdesk-sdk">GitHub</a>
+      </nav>
+      <button type="button" class="sidebar-toggle" aria-label="Open menu" hidden></button>
+    </div>
+  </header>
+  <div class="layout-body">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-scroll">
+        <div class="search">
+          <label class="search-label" for="doc-search">Search docs</label>
+          <input id="doc-search" type="search" class="search-input"
+            placeholder="Search docs" autocomplete="off" spellcheck="false"
+            aria-controls="search-results" aria-expanded="false">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Getting started</p>
+          <ul class="nav-list">
+          <li><a href="getting-started.html">Getting started</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Guides</p>
+          <ul class="nav-list">
+          <li><a href="text-to-speech.html">Text to speech</a></li>
+          <li><a href="speech-to-text.html">Speech to text</a></li>
+          <li><a href="streaming.html">Streaming</a></li>
+          <li><a href="recipes.html">Node.js recipes</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Reference</p>
+          <ul class="nav-list">
+          <li><a href="configuration.html">Configuration</a></li>
+          <li><a href="errors.html">Errors</a></li>
+          <li><a href="health-and-status.html">Health and status</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Migration</p>
+          <ul class="nav-list">
+          <li><a href="0.2.0.html">0.1.0 to 0.2.0</a></li>
+          <li><a href="0.2.1.html">0.2.0 to 0.2.1</a></li>
+          <li><a href="0.2.2.html">0.2.1 to 0.2.2</a></li>
+          <li><a href="0.2.3.html" class="active">0.2.2 to 0.2.3</a></li>
+          </ul>
+        </div>
+        <div class="nav-section">
+          <p class="nav-section-title">Testing</p>
+          <ul class="nav-list">
+          <li><a href="testing.html">Testing</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <div class="content-column">
+      <main class="doc-main">
+        <article class="markdown prose"><h1 id="upgrading-to-0-2-3">Upgrading to 0.2.3</h1>
+<p>This guide covers <code>patientdesk-sdk</code> <code>0.2.2</code> to <code>0.2.3</code>. The release has no
+breaking API change. It follows two PatientDesk changes: barge-in on the TTS
+WebSocket, and prepaid credit with a new <code>402</code> error.</p>
+<h2 id="at-a-glance">At a glance</h2>
+<ul>
+<li><code>speech.socket()</code> returns a new <code>cancel()</code> that stops the oldest unfinished
+<code>speak</code> and keeps the connection open.</li>
+<li><code>speechEnd</code> carries <code>canceled: true</code> when a cancel stopped that <code>speak</code>.</li>
+<li><code>402 insufficient_balance</code> is never retried, and <code>PatientDeskError</code> has an
+<code>isInsufficientBalance</code> getter.</li>
+<li><code>SpeechSocket.speak()</code> is typed as returning <code>Promise&lt;void&gt;</code>, which it already
+did at runtime.</li>
+</ul>
+<h2 id="barge-in">Barge-in</h2>
+<p>When the caller talks over the agent, send one <code>cancel</code> for every <code>speak</code> that
+has no <code>speech_end</code> yet, then drop buffered audio until the next <code>speechStart</code>:</p>
+<pre><code class="language-ts">let unfinished = 0;
+const socket = pd.speech.socket({ speechEnd: () =&gt; unfinished-- });
+const say = (input: string) =&gt; {
+  unfinished++;
+  return socket.speak({ input });
+};
+
+// The caller started talking:
+for (let i = 0; i &lt; unfinished; i++) socket.cancel();
+</code></pre>
+<p>A <code>speak</code> is charged once its <code>speech_start</code> is sent, even when a cancel cuts it
+short. One canceled while still queued is not charged. <code>speak()</code> and <code>cancel()</code>
+reach the server in call order. See <a href="streaming.html#barge-in">Streaming</a>.</p>
+<h2 id="prepaid-credit">Prepaid credit</h2>
+<p>PatientDesk now draws usage from prepaid credit. When it runs out, Alania and
+Duyu requests return <code>402 insufficient_balance</code>. <code>antalia-mini</code> stays free.</p>
+<pre><code class="language-ts">try {
+  await pd.speech.create({ input: &quot;Merhaba&quot; });
+} catch (err) {
+  if (err instanceof PatientDeskError &amp;&amp; err.isInsufficientBalance) {
+    // Add credit or turn on automatic top-up; retrying will not help.
+  }
+}
+</code></pre>
+<p><code>429 quota_exceeded</code> is now a monthly ceiling against abuse rather than the
+billing limit. It is still never retried.</p>
+<h2 id="backward-compatibility">Backward compatibility</h2>
+<ul>
+<li><code>cancel()</code> and <code>canceled</code> are additions. Code that does not use them behaves
+as before.</li>
+<li>Before 0.2.3, a <code>402</code> with a <code>Retry-After</code> header could be retried. It now
+fails at once.</li>
+</ul>
+<h2 id="verifying-the-upgrade">Verifying the upgrade</h2>
+<pre class="shell-block"><code><span class="sh-cli">npm</span> <span class="sh-cmd">run</span> <span class="sh-arg">typecheck</span>
+<span class="sh-cli">npm</span> <span class="sh-cmd">test</span>
+</code></pre></article>
+        <footer class="doc-footer">
+          <p>patientdesk-sdk is unofficial and not affiliated with PatientDesk. MIT licensed.</p>
+        </footer>
+      </main>
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+          <li><a href="#at-a-glance">At a glance</a></li>
+          <li><a href="#barge-in">Barge-in</a></li>
+          <li><a href="#prepaid-credit">Prepaid credit</a></li>
+          <li><a href="#backward-compatibility">Backward compatibility</a></li>
+          <li><a href="#verifying-the-upgrade">Verifying the upgrade</a></li>
+          </ul>
+        </nav>
+    </div>
+  </div>
+  <script src="../assets/docs.js" defer></script>
+</body>
+</html>

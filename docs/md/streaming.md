@@ -56,6 +56,43 @@ await socket.closed;
 one at a time. The connection can set `model`, `encoding` (`pcm_s16le`, `mulaw`,
 `alaw`) and `sample_rate` for every message.
 
+### Barge-in
+
+`socket.cancel()` stops the oldest `speak` that has no `speech_end` yet, at once.
+Its `speechEnd` arrives with `canceled: true` and the connection stays open. The
+next queued `speak` starts in its turn. When the caller talks over the agent,
+send one `cancel` per unfinished `speak` and drop buffered audio:
+
+```ts
+let unfinished = 0;
+let muted = false;
+const socket = pd.speech.socket({
+  speechStart: () => (muted = false),
+  audio: (chunk) => !muted && player.write(chunk),
+  speechEnd: () => unfinished--,
+});
+const say = (input: string) => {
+  unfinished++;
+  return socket.speak({ input });
+};
+
+// The caller started talking:
+muted = true;
+player.clear();
+for (let i = 0; i < unfinished; i++) socket.cancel();
+```
+
+- Audio already on its way before the cancel may still arrive. Drop it until the
+  next `speechStart`.
+- A `speak` is charged once its `speech_start` is sent, for all its input
+  characters, even when a cancel cuts it short. One canceled before its
+  `speech_start` gets only a `speech_end` (`audio_s: 0`, `canceled: true`) and is
+  not charged.
+- `speak()` and `cancel()` reach the server in call order. With no `speak`
+  outstanding, `cancel()` does nothing.
+- `close()` also stops the current `speak`, but the next reply then needs a new
+  connection.
+
 ## WebSocket (STT)
 
 `wss://voice.patientdesk.ai/v1/audio/stream` takes raw PCM and emits a `final`
