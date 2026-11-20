@@ -56,6 +56,14 @@ export class PatientDeskError extends Error {
     return this.status === 429;
   }
 
+  /**
+   * `true` for `402 insufficient_balance`: the prepaid credit is used up. Add
+   * credit or turn on automatic top-up; waiting will not clear it.
+   */
+  get isInsufficientBalance(): boolean {
+    return this.status === 402;
+  }
+
   /** Date the daily allowance resets, when known. */
   get resetsAt(): Date | null {
     if (this.resetAt) {

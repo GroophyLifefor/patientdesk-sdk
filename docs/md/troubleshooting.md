@@ -87,8 +87,9 @@ see whether it is a `user` or `pool` limit, and `resetsAt` for the reset time.
 The client already retried twice, honouring `Retry-After`. Back off until
 `resetsAt`, then retry.
 
-`429 quota_exceeded` is not retried, the monthly quota does not clear by
-waiting. The free `antalia-mini` model has its own limits (`429
+`429 quota_exceeded` is not retried, the monthly ceiling does not clear by
+waiting. `402 insufficient_balance` (`err.isInsufficientBalance`) is not retried
+either: add credit or turn on automatic top-up. The free `antalia-mini` model has its own limits (`429
 free_limit_exceeded`) and does not consume quota.
 
 ```ts

@@ -33,6 +33,7 @@ try {
 | `retryAfterSeconds` | `number \| undefined` | From `Retry-After` or `details`. |
 | `resetAt` | `string \| undefined` | ISO time from `error.details.resetAt`. |
 | `isRateLimit` | `boolean` (getter) | `true` when `status === 429`. |
+| `isInsufficientBalance` | `boolean` (getter) | `true` when `status === 402`: the prepaid credit is used up. |
 | `resetsAt` | `Date \| null` (getter) | `resetAt`, or now plus `retryAfterSeconds`. |
 
 `resetsAt` returns a `Date` when the server gave either a reset time or a retry
@@ -63,7 +64,9 @@ The client retries automatically on `408`, `409`, `425`, `429`, `500`, `502`,
 
 - Default `maxRetries` is `2`, so up to 3 attempts.
 - `429 quota_exceeded` is **never** retried: waiting will not clear the monthly
-  quota. Back off until the quota resets instead.
+  ceiling. It guards against abuse, so ask PatientDesk to raise it.
+- `402 insufficient_balance` is **never** retried: the prepaid credit is used
+  up. Add credit or turn on automatic top-up. `antalia-mini` keeps working.
 - When a `Retry-After` header is present, the wait is capped at 30 seconds.
 - Otherwise the delay grows exponentially, base `250 ms`, capped at `4 s`, with a
   small jitter.

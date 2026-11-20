@@ -63,6 +63,7 @@
           <li><a href="0.2.0.html">0.1.0 to 0.2.0</a></li>
           <li><a href="0.2.1.html">0.2.0 to 0.2.1</a></li>
           <li><a href="0.2.2.html">0.2.1 to 0.2.2</a></li>
+          <li><a href="0.2.3.html">0.2.2 to 0.2.3</a></li>
           </ul>
         </div>
         <div class="nav-section">
@@ -135,8 +136,9 @@ seconds if that never arrives, so callers cannot hang.</p>
 see whether it is a <code>user</code> or <code>pool</code> limit, and <code>resetsAt</code> for the reset time.
 The client already retried twice, honouring <code>Retry-After</code>. Back off until
 <code>resetsAt</code>, then retry.</p>
-<p><code>429 quota_exceeded</code> is not retried, the monthly quota does not clear by
-waiting. The free <code>antalia-mini</code> model has its own limits (<code>429 free_limit_exceeded</code>) and does not consume quota.</p>
+<p><code>429 quota_exceeded</code> is not retried, the monthly ceiling does not clear by
+waiting. <code>402 insufficient_balance</code> (<code>err.isInsufficientBalance</code>) is not retried
+either: add credit or turn on automatic top-up. The free <code>antalia-mini</code> model has its own limits (<code>429 free_limit_exceeded</code>) and does not consume quota.</p>
 <pre><code class="language-ts">if (err instanceof PatientDeskError &amp;&amp; err.isRateLimit) {
   await sleep(err.resetsAt!.getTime() - Date.now());
 }

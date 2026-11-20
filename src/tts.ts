@@ -236,7 +236,12 @@ export class SpeechApi {
           });
           break;
         case "speech_end":
-          events.speechEnd?.({ audioSeconds: message.audio_s, inferMs: message.infer_ms, raw: message });
+          events.speechEnd?.({
+            audioSeconds: message.audio_s,
+            inferMs: message.infer_ms,
+            canceled: message.canceled === true,
+            raw: message,
+          });
           break;
         case "stopped":
           events.stopped?.(message);
@@ -253,13 +258,29 @@ export class SpeechApi {
       finish();
     };
 
+    const send = (payload: string) => {
+      if (ready && socket.readyState === 1) socket.send(payload);
+      else queue.push(payload);
+    };
+    // `speak` builds its body asynchronously (it may read a reference audio
+    // file). Chain every outgoing message so `speak`/`cancel` reach the server
+    // in call order: a `cancel` ends the oldest unfinished `speak`.
+    let outgoing: Promise<void> = Promise.resolve();
+
     return {
-      speak: async (params: SpeechCreateParams): Promise<void> => {
-        // A `speak` without an explicit model uses the connection's model.
-        const body = await this.buildBody({ ...params, model: params.model ?? options.model });
-        const payload = JSON.stringify({ type: "speak", ...body });
-        if (ready && socket.readyState === 1) socket.send(payload);
-        else queue.push(payload);
+      speak: (params: SpeechCreateParams): Promise<void> => {
+        const step = outgoing.then(async () => {
+          // A `speak` without an explicit model uses the connection's model.
+          const body = await this.buildBody({ ...params, model: params.model ?? options.model });
+          send(JSON.stringify({ type: "speak", ...body }));
+        });
+        outgoing = step.catch(() => undefined);
+        return step;
+      },
+      cancel: (): Promise<void> => {
+        const step = outgoing.then(() => send(JSON.stringify({ type: "cancel" })));
+        outgoing = step.catch(() => undefined);
+        return step;
       },
       stop() {
         try {

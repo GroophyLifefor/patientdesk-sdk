@@ -120,6 +120,10 @@ socket.stop();       // `speech_end`/`stopped` arrive before the close
 await socket.closed;
 ```
 
+When the caller talks over the agent, `socket.cancel()` stops the oldest
+unfinished sentence and keeps the connection open (see
+[Streaming](docs/md/streaming.md#barge-in)).
+
 ## Speech to text (Duyu)
 
 The audio is uploaded as `multipart/form-data` (`file`, `model`, `language`,
@@ -202,8 +206,8 @@ try {
 ```
 
 `429`/`5xx`/network failures are retried with backoff (honouring `Retry-After`);
-other `4xx` are returned immediately. `429 quota_exceeded` is **not** retried —
-waiting will not clear it.
+other `4xx` are returned immediately. `429 quota_exceeded` and
+`402 insufficient_balance` are **not** retried — waiting will not clear them.
 
 ## Upstream docs tracking
 

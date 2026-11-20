@@ -63,6 +63,7 @@
           <li><a href="0.2.0.html">0.1.0 to 0.2.0</a></li>
           <li><a href="0.2.1.html">0.2.0 to 0.2.1</a></li>
           <li><a href="0.2.2.html">0.2.1 to 0.2.2</a></li>
+          <li><a href="0.2.3.html">0.2.2 to 0.2.3</a></li>
           </ul>
         </div>
         <div class="nav-section">
@@ -128,7 +129,7 @@ const pd = new PatientDesk({
 <td><code>maxRetries</code></td>
 <td><code>number</code></td>
 <td><code>2</code></td>
-<td>Retries for 429, 5xx and network errors. <code>quota_exceeded</code> is never retried.</td>
+<td>Retries for 429, 5xx and network errors. <code>quota_exceeded</code> and <code>402 insufficient_balance</code> are never retried.</td>
 </tr>
 <tr>
 <td><code>timeout</code></td>
